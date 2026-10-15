@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ecfdf5"/>
+      <stop offset="100%" stop-color="#d1fae5"/>
+    </linearGradient>
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="60%" stop-color="#15803d"/>
+      <stop offset="100%" stop-color="#166534"/>
+    </linearGradient>
+    <linearGradient id="blastSpot" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e5e7eb"/>
+      <stop offset="50%" stop-color="#9ca3af"/>
+      <stop offset="85%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)"/>
+  <path d="M0,260 Q150,240 400,270 L400,300 L0,300 Z" fill="#854d0e" opacity="0.3"/>
+  <path d="M70,300 Q110,140 180,60 Q210,140 130,300" fill="#22c55e" opacity="0.4"/>
+  <path d="M280,300 Q310,130 360,40 Q330,150 250,300" fill="#16a34a" opacity="0.35"/>
+  <path d="M120,300 Q160,160 210,30 Q260,170 190,300" fill="url(#leafGrad)"/>
+  <path d="M155,300 Q185,160 210,30" stroke="#86efac" stroke-width="2" fill="none" opacity="0.7"/>
+  <g transform="translate(182, 105) rotate(18)">
+    <path d="M0,-24 Q10,-10 12,0 Q10,10 0,24 Q-10,10 -12,0 Q-10,-10 0,-24 Z" fill="url(#blastSpot)"/>
+    <path d="M0,-16 Q6,-6 7,0 Q6,6 0,16 Q-6,6 -7,0 Q-6,-6 0,-16 Z" fill="#f3f4f6"/>
+    <ellipse cx="0" cy="0" rx="4" ry="10" fill="#6b7280"/>
+    <path d="M0,-28 Q14,-10 16,0 Q14,10 0,28 Q-14,10 -16,0 Q-14,-10 0,-28 Z" stroke="#eab308" stroke-width="2.5" fill="none" opacity="0.75"/>
+  </g>
+  <g transform="translate(170, 165) rotate(22)">
+    <path d="M0,-30 Q12,-12 15,0 Q12,12 0,30 Q-12,12 -15,0 Q-12,-12 0,-30 Z" fill="url(#blastSpot)"/>
+    <ellipse cx="0" cy="0" rx="9" ry="18" fill="#e5e7eb"/>
+    <ellipse cx="0" cy="0" rx="5" ry="11" fill="#4b5563"/>
+    <path d="M0,-34 Q16,-12 19,0 Q16,12 0,34 Q-16,12 -19,0 Q-16,-12 0,-34 Z" stroke="#ca8a04" stroke-width="2" fill="none" opacity="0.8"/>
+  </g>
+  <g transform="translate(195, 60) rotate(15)">
+    <path d="M0,-12 Q6,-5 7,0 Q6,5 0,12 Q-6,5 -7,0 Q-6,-5 0,-12 Z" fill="#92400e"/>
+    <ellipse cx="0" cy="0" rx="3" ry="7" fill="#d1d5db"/>
+  </g>
+  <rect x="15" y="15" width="130" height="26" rx="6" fill="#14532d" opacity="0.9"/>
+  <text x="25" y="32" fill="#ffffff" font-family="system-ui" font-weight="700" font-size="12">Sample: Padi / Rice</text>
+</svg>

@@ -1,0 +1,8 @@
+{
+  "name": "Remix Tani Pintar - Crop Health Advisor",
+  "description": "AI-powered crop health advisor for smallholder farmers with multi-agent diagnosis, real-time weather risk analysis, organic action planning, and safety verification.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

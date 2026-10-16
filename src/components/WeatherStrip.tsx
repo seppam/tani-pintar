@@ -18,44 +18,43 @@ interface WeatherStripProps {
   language: Language;
 }
 
-export const WeatherStrip = React.memo<WeatherStripProps>(function WeatherStrip({ context, language }) {
+function getRiskBadge(level: 'low' | 'moderate' | 'high' | 'severe', t: typeof translations[Language]) {
+  switch (level) {
+    case 'severe':
+      return {
+        label: t.riskSevere,
+        bg: 'bg-red-600 text-white',
+        border: 'border-red-700',
+        textColor: 'text-red-700',
+      };
+    case 'high':
+      return {
+        label: t.riskHigh,
+        bg: 'bg-red-100 text-red-800',
+        border: 'border-red-300',
+        textColor: 'text-red-700',
+      };
+    case 'moderate':
+      return {
+        label: t.riskModerate,
+        bg: 'bg-amber-100 text-amber-800',
+        border: 'border-amber-300',
+        textColor: 'text-amber-700',
+      };
+    default:
+      return {
+        label: t.riskLow,
+        bg: 'bg-emerald-100 text-emerald-800',
+        border: 'border-emerald-300',
+        textColor: 'text-emerald-700',
+      };
+  }
+}
+
+const WeatherStripComponent: React.FC<WeatherStripProps> = ({ context, language }) => {
   const t = translations[language];
   const { weather, diseaseRiskLevel, diseaseRiskFactors, microclimateSummary, regionalAgroAdvisory } = context;
-
-  const getRiskBadge = (level: 'low' | 'moderate' | 'high' | 'severe') => {
-    switch (level) {
-      case 'severe':
-        return {
-          label: t.riskSevere,
-          bg: 'bg-red-600 text-white',
-          border: 'border-red-700',
-          textColor: 'text-red-700',
-        };
-      case 'high':
-        return {
-          label: t.riskHigh,
-          bg: 'bg-red-100 text-red-800',
-          border: 'border-red-300',
-          textColor: 'text-red-700',
-        };
-      case 'moderate':
-        return {
-          label: t.riskModerate,
-          bg: 'bg-amber-100 text-amber-800',
-          border: 'border-amber-300',
-          textColor: 'text-amber-700',
-        };
-      default:
-        return {
-          label: t.riskLow,
-          bg: 'bg-emerald-100 text-emerald-800',
-          border: 'border-emerald-300',
-          textColor: 'text-emerald-700',
-        };
-    }
-  };
-
-  const risk = getRiskBadge(diseaseRiskLevel);
+  const risk = getRiskBadge(diseaseRiskLevel, t);
 
   return (
     <div className="bg-white rounded-2xl border border-stone-200/90 shadow-sm p-4 sm:p-6 space-y-4">
@@ -207,4 +206,7 @@ export const WeatherStrip = React.memo<WeatherStripProps>(function WeatherStrip(
       )}
     </div>
   );
-});
+};
+
+export const WeatherStrip = React.memo(WeatherStripComponent);
+

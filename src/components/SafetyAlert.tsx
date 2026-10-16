@@ -17,7 +17,7 @@ interface SafetyAlertProps {
   language: Language;
 }
 
-export const SafetyAlert = React.memo<SafetyAlertProps>(function SafetyAlert({ safety, language }) {
+const SafetyAlertComponent: React.FC<SafetyAlertProps> = ({ safety, language }) => {
   const t = translations[language];
 
   return (
@@ -143,4 +143,7 @@ export const SafetyAlert = React.memo<SafetyAlertProps>(function SafetyAlert({ s
       )}
     </div>
   );
-});
+};
+
+export const SafetyAlert = React.memo(SafetyAlertComponent);
+

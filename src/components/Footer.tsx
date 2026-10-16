@@ -6,7 +6,7 @@ interface FooterProps {
   language: Language;
 }
 
-export const Footer = React.memo<FooterProps>(function Footer({ language }) {
+const FooterComponent: React.FC<FooterProps> = ({ language }) => {
   return (
     <footer className="border-t border-stone-200 bg-white/70 py-6 mt-12 text-center text-xs text-stone-500">
       <div className="max-w-4xl mx-auto px-4 space-y-2">
@@ -29,4 +29,7 @@ export const Footer = React.memo<FooterProps>(function Footer({ language }) {
       </div>
     </footer>
   );
-});
+};
+
+export const Footer = React.memo(FooterComponent);
+

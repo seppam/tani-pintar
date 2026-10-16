@@ -18,54 +18,54 @@ interface ActionPlanTimelineProps {
   language: Language;
 }
 
-export const ActionPlanTimeline = React.memo<ActionPlanTimelineProps>(function ActionPlanTimeline({ planner, language }) {
+function getCategoryBadge(cat: PlanStep['category'], t: typeof translations[Language]) {
+  switch (cat) {
+    case 'organic':
+      return {
+        label: t.badgeOrganic,
+        className: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        icon: Leaf,
+      };
+    case 'cultural':
+      return {
+        label: t.badgeCultural,
+        className: 'bg-teal-100 text-teal-800 border-teal-300',
+        icon: Wrench,
+      };
+    case 'biological':
+      return {
+        label: t.badgeBiological,
+        className: 'bg-lime-100 text-lime-800 border-lime-300',
+        icon: Sparkles,
+      };
+    case 'chemical':
+      return {
+        label: t.badgeChemical,
+        className: 'bg-red-100 text-red-800 border-red-300',
+        icon: AlertTriangle,
+      };
+    default:
+      return {
+        label: t.badgeLowCost,
+        className: 'bg-amber-100 text-amber-800 border-amber-300',
+        icon: DollarSign,
+      };
+  }
+}
+
+function getCostBadge(cost: PlanStep['estimatedCost'], t: typeof translations[Language]) {
+  switch (cost) {
+    case 'free':
+      return { label: t.costFree, className: 'bg-stone-100 text-stone-700' };
+    case 'low':
+      return { label: t.costLow, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    default:
+      return { label: t.costModerate, className: 'bg-amber-50 text-amber-700 border-amber-200' };
+  }
+}
+
+const ActionPlanTimelineComponent: React.FC<ActionPlanTimelineProps> = ({ planner, language }) => {
   const t = translations[language];
-
-  const getCategoryBadge = (cat: PlanStep['category']) => {
-    switch (cat) {
-      case 'organic':
-        return {
-          label: t.badgeOrganic,
-          className: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-          icon: Leaf,
-        };
-      case 'cultural':
-        return {
-          label: t.badgeCultural,
-          className: 'bg-teal-100 text-teal-800 border-teal-300',
-          icon: Wrench,
-        };
-      case 'biological':
-        return {
-          label: t.badgeBiological,
-          className: 'bg-lime-100 text-lime-800 border-lime-300',
-          icon: Sparkles,
-        };
-      case 'chemical':
-        return {
-          label: t.badgeChemical,
-          className: 'bg-red-100 text-red-800 border-red-300',
-          icon: AlertTriangle,
-        };
-      default:
-        return {
-          label: t.badgeLowCost,
-          className: 'bg-amber-100 text-amber-800 border-amber-300',
-          icon: DollarSign,
-        };
-    }
-  };
-
-  const getCostBadge = (cost: PlanStep['estimatedCost']) => {
-    switch (cost) {
-      case 'free':
-        return { label: t.costFree, className: 'bg-stone-100 text-stone-700' };
-      case 'low':
-        return { label: t.costLow, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-      default:
-        return { label: t.costModerate, className: 'bg-amber-50 text-amber-700 border-amber-200' };
-    }
-  };
 
   return (
     <div className="bg-white rounded-2xl border border-stone-200/90 shadow-sm p-4 sm:p-6 space-y-5">
@@ -107,9 +107,9 @@ export const ActionPlanTimeline = React.memo<ActionPlanTimelineProps>(function A
       {/* Sequential Timeline of Steps */}
       <div className="relative pl-6 sm:pl-8 space-y-6 before:absolute before:left-3 sm:before:left-4 before:top-3 before:bottom-3 before:w-0.5 before:bg-emerald-200">
         {planner.steps?.map((step) => {
-          const category = getCategoryBadge(step.category);
+          const category = getCategoryBadge(step.category, t);
           const CategoryIcon = category.icon;
-          const cost = getCostBadge(step.estimatedCost);
+          const cost = getCostBadge(step.estimatedCost, t);
 
           return (
             <div key={step.stepNumber} className="relative group">
@@ -182,4 +182,7 @@ export const ActionPlanTimeline = React.memo<ActionPlanTimelineProps>(function A
       </div>
     </div>
   );
-});
+};
+
+export const ActionPlanTimeline = React.memo(ActionPlanTimelineComponent);
+

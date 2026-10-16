@@ -8,29 +8,28 @@ interface DiagnosisCardProps {
   language: Language;
 }
 
-export const DiagnosisCard = React.memo<DiagnosisCardProps>(function DiagnosisCard({ vision, language }) {
+function getSeverityBadge(sev: 'low' | 'medium' | 'high', t: typeof translations[Language]) {
+  switch (sev) {
+    case 'high':
+      return {
+        label: t.severityHigh,
+        bg: 'bg-red-100 text-red-800 border-red-200',
+      };
+    case 'medium':
+      return {
+        label: t.severityMedium,
+        bg: 'bg-amber-100 text-amber-800 border-amber-200',
+      };
+    default:
+      return {
+        label: t.severityLow,
+        bg: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+      };
+  }
+}
+
+const DiagnosisCardComponent: React.FC<DiagnosisCardProps> = ({ vision, language }) => {
   const t = translations[language];
-
-  const getSeverityBadge = (sev: 'low' | 'medium' | 'high') => {
-    switch (sev) {
-      case 'high':
-        return {
-          label: t.severityHigh,
-          bg: 'bg-red-100 text-red-800 border-red-200',
-        };
-      case 'medium':
-        return {
-          label: t.severityMedium,
-          bg: 'bg-amber-100 text-amber-800 border-amber-200',
-        };
-      default:
-        return {
-          label: t.severityLow,
-          bg: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-        };
-    }
-  };
-
   const primaryConfidencePct = Math.round((vision.overallConfidence || 0) * 100);
 
   return (
@@ -147,7 +146,7 @@ export const DiagnosisCard = React.memo<DiagnosisCardProps>(function DiagnosisCa
 
         <div className="space-y-2.5">
           {vision.issues?.map((issue, idx) => {
-            const sev = getSeverityBadge(issue.severity);
+            const sev = getSeverityBadge(issue.severity, t);
             const confPct = Math.round(issue.confidence * 100);
 
             return (
@@ -236,4 +235,7 @@ export const DiagnosisCard = React.memo<DiagnosisCardProps>(function DiagnosisCa
       )}
     </div>
   );
-});
+};
+
+export const DiagnosisCard = React.memo(DiagnosisCardComponent);
+

@@ -9,20 +9,59 @@ import {
   Navigation,
   CheckCircle2,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { Language, SampleCrop } from '../types';
 import { SAMPLE_CROPS } from '../data/sampleCrops';
 import { translations } from '../i18n/translations';
 
-interface SampleCardsProps {
+interface SampleCardItemProps {
+  sample: SampleCrop;
+  language: Language;
+  onSelect: (sample: SampleCrop) => void;
+}
+
+const SampleCardItem = React.memo(function SampleCardItem({
+  sample,
+  language,
+  onSelect,
+}: SampleCardItemProps) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(sample)}
+      className="text-left bg-white hover:bg-emerald-50/50 p-2.5 rounded-xl border border-stone-200/90 hover:border-emerald-400 transition-colors shadow-xs group flex items-start gap-2.5 cursor-pointer"
+    >
+      <img
+        src={sample.thumbnailUrl}
+        alt={sample.cropType}
+        className="w-14 h-14 rounded-lg object-cover bg-stone-100 flex-shrink-0 border border-stone-200 group-hover:scale-105 transition-transform"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="font-bold text-xs text-stone-900 group-hover:text-emerald-800 truncate">
+          {language === 'id' ? sample.cropNameId.split('(')[0] : sample.cropNameEn.split('(')[0]}
+        </div>
+        <div className="text-[11px] text-amber-700 font-medium truncate mt-0.5">
+          {language === 'id' ? sample.issueId.split('(')[0] : sample.issueEn.split('(')[0]}
+        </div>
+        <div className="text-[10px] text-stone-500 flex items-center gap-1 mt-1 truncate">
+          <MapPin className="w-2.5 h-2.5 flex-shrink-0" />
+          {sample.location}
+        </div>
+      </div>
+    </button>
+  );
+});
+
+interface SampleCardsSectionProps {
   language: Language;
   onSelectSample: (sample: SampleCrop) => void;
 }
 
-export const SampleCards = React.memo<SampleCardsProps>(function SampleCards({
+const SampleCardsSection = React.memo(function SampleCardsSection({
   language,
   onSelectSample,
-}) {
+}: SampleCardsSectionProps) {
   const t = translations[language];
 
   return (
@@ -41,30 +80,12 @@ export const SampleCards = React.memo<SampleCardsProps>(function SampleCards({
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {SAMPLE_CROPS.map((sample) => (
-          <button
+          <SampleCardItem
             key={sample.id}
-            type="button"
-            onClick={() => onSelectSample(sample)}
-            className="text-left bg-white hover:bg-emerald-50/50 p-2.5 rounded-xl border border-stone-200/90 hover:border-emerald-400 transition-all shadow-xs group flex items-start gap-2.5"
-          >
-            <img
-              src={sample.thumbnailUrl}
-              alt={sample.cropType}
-              className="w-14 h-14 rounded-lg object-cover bg-stone-100 flex-shrink-0 border border-stone-200 group-hover:scale-105 transition"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="font-bold text-xs text-stone-900 group-hover:text-emerald-800 truncate">
-                {language === 'id' ? sample.cropNameId.split('(')[0] : sample.cropNameEn.split('(')[0]}
-              </div>
-              <div className="text-[11px] text-amber-700 font-medium truncate mt-0.5">
-                {language === 'id' ? sample.issueId.split('(')[0] : sample.issueEn.split('(')[0]}
-              </div>
-              <div className="text-[10px] text-stone-500 flex items-center gap-1 mt-1 truncate">
-                <MapPin className="w-2.5 h-2.5 flex-shrink-0" />
-                {sample.location}
-              </div>
-            </div>
-          </button>
+            sample={sample}
+            language={language}
+            onSelect={onSelectSample}
+          />
         ))}
       </div>
     </div>
@@ -84,11 +105,11 @@ interface PhotoUploaderProps {
   isLoading: boolean;
 }
 
-export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUploader({
+const PhotoUploaderComponent: React.FC<PhotoUploaderProps> = ({
   language,
   onAnalyze,
   isLoading,
-}) {
+}) => {
   const t = translations[language];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -103,6 +124,7 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
   });
   const [farmerNote, setFarmerNote] = useState<string>('');
   const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState<boolean>(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -110,7 +132,7 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
     ? ['Padi', 'Cabai Merah', 'Jagung', 'Tomat', 'Bawang Merah', 'Kedelai']
     : ['Rice', 'Chili Pepper', 'Maize / Corn', 'Tomato', 'Shallot', 'Soybean'];
 
-  const handleFile = useCallback((file: File) => {
+  const handleFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
       setValidationError(
         language === 'id' ? 'Berkas harus berupa gambar (JPG, PNG, WEBP)' : 'File must be an image (JPG, PNG, WEBP)'
@@ -125,9 +147,9 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
       setImagePreview(e.target?.result as string);
     };
     reader.readAsDataURL(file);
-  }, [language]);
+  };
 
-  const handleDrag = useCallback((e: React.DragEvent) => {
+  const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === 'dragenter' || e.type === 'dragover') {
@@ -135,40 +157,110 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
     } else if (e.type === 'dragleave') {
       setDragActive(false);
     }
-  }, []);
+  };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFile(e.dataTransfer.files[0]);
     }
-  }, [handleFile]);
+  };
 
-  const handleUseLocation = useCallback(() => {
+  const tryIpFallback = async (reason: string): Promise<boolean> => {
+    try {
+      const res = await fetch('https://get.geojs.io/v1/ip/geo.json');
+      if (res.ok) {
+        const data = await res.json();
+        const lat = parseFloat(data.latitude);
+        const lon = parseFloat(data.longitude);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          const region = data.city || data.region || (language === 'id' ? 'Lokasi Jaringan' : 'Network Location');
+          const country = data.country || '';
+          const name = `${region}${country ? ', ' + country : ''} (IP)`;
+          setCoordinates({ lat, lon });
+          setLocation(name);
+          setLocationNotice(
+            language === 'id'
+              ? `GPS (${reason}) dialihkan ke lokasi jaringan: ${name}`
+              : `GPS (${reason}) routed to network location: ${name}`
+          );
+          setIsLocating(false);
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn('IP fallback geolocation error:', e);
+    }
+    return false;
+  };
+
+  const handleUseLocation = () => {
+    setLocationNotice(null);
+    setIsLocating(true);
+
     if (!navigator.geolocation) {
-      alert(language === 'id' ? 'Browser tidak mendukung GPS' : 'GPS not supported by browser');
+      void (async () => {
+        const ok = await tryIpFallback(language === 'id' ? 'Browser tidak mendukung GPS' : 'Browser lacks GPS');
+        if (!ok) {
+          setLocation('Subang, Jawa Barat');
+          setCoordinates({ lat: -6.57, lon: 107.76 });
+          setLocationNotice(
+            language === 'id'
+              ? 'GPS tidak tersedia. Menggunakan lokasi default Subang, Jawa Barat.'
+              : 'GPS not supported. Using default location Subang, West Java.'
+          );
+        }
+        setIsLocating(false);
+      })();
       return;
     }
-    setIsLocating(true);
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
         setCoordinates({ lat, lon });
-        setLocation(`${lat.toFixed(3)}°, ${lon.toFixed(3)}° (GPS)`);
+        setLocation(`${lat.toFixed(4)}°, ${lon.toFixed(4)}° (GPS)`);
+        setLocationNotice(
+          language === 'id'
+            ? `Berhasil mengunci koordinat GPS: ${lat.toFixed(4)}°, ${lon.toFixed(4)}°`
+            : `GPS lock acquired: ${lat.toFixed(4)}°, ${lon.toFixed(4)}°`
+        );
         setIsLocating(false);
       },
-      (err) => {
-        console.warn('Geolocation error:', err);
+      async (err: GeolocationPositionError) => {
+        const code = err ? err.code : 0;
+        const msg = err ? err.message : '';
+        const detailedReason = msg || (
+          code === 1 ? 'Izin akses GPS ditolak' :
+          code === 2 ? 'Sinyal lokasi tidak tersedia' :
+          code === 3 ? 'Waktu pencarian GPS habis' :
+          'Sensor GPS tidak merespons'
+        );
+
+        console.warn(`Geolocation error (Code ${code}):`, detailedReason);
+
+        const ok = await tryIpFallback(detailedReason);
+        if (!ok) {
+          setLocation('Subang, Jawa Barat');
+          setCoordinates({ lat: -6.57, lon: 107.76 });
+          setLocationNotice(
+            language === 'id'
+              ? `GPS (${detailedReason}). Menggunakan lokasi default Subang, Jawa Barat.`
+              : `GPS (${detailedReason}). Using default location Subang, West Java.`
+          );
+        }
         setIsLocating(false);
-        setLocation('Subang, Jawa Barat');
-        setCoordinates({ lat: -6.57, lon: 107.76 });
       },
-      { timeout: 8000 }
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 300000,
+      }
     );
-  }, [language]);
+  };
 
   const handleSelectSample = useCallback((sample: SampleCrop) => {
     setImagePreview(sample.imageUrl);
@@ -178,6 +270,7 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
     setCoordinates(sample.coordinates);
     setFarmerNote(language === 'id' ? sample.noteId : sample.noteEn);
     setValidationError(null);
+    setLocationNotice(null);
   }, [language]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -204,8 +297,8 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
 
   return (
     <div className="space-y-6">
-      {/* 3 One-Click Sample Demos Banner (Memoized) */}
-      <SampleCards
+      {/* 3 One-Click Sample Demos Banner - Memoized */}
+      <SampleCardsSection
         language={language}
         onSelectSample={handleSelectSample}
       />
@@ -228,7 +321,7 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
-          className={`relative border-2 border-dashed rounded-2xl transition-colors duration-200 overflow-hidden ${
+          className={`relative border-2 border-dashed rounded-2xl transition-colors overflow-hidden ${
             dragActive
               ? 'border-emerald-500 bg-emerald-50/60'
               : imagePreview
@@ -247,13 +340,13 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
                 <button
                   type="button"
                   onClick={() => setImagePreview(null)}
-                  className="bg-stone-900/85 hover:bg-red-600 text-white p-1.5 rounded-full transition shadow-md"
+                  className="bg-stone-900 hover:bg-red-600 text-white p-1.5 rounded-full transition-colors shadow-md cursor-pointer"
                   title="Remove photo"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="p-3 bg-white/95 border-t border-stone-200 flex items-center justify-between text-xs">
+              <div className="p-3 bg-white border-t border-stone-200 flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1.5 text-emerald-700 font-semibold">
                   <CheckCircle2 className="w-4 h-4" />
                   {language === 'id' ? 'Foto siap dianalisis' : 'Photo ready for diagnosis'}
@@ -261,7 +354,7 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-stone-600 hover:text-emerald-700 font-medium underline"
+                  className="text-stone-600 hover:text-emerald-700 font-medium underline cursor-pointer"
                 >
                   {language === 'id' ? 'Ganti Foto' : 'Change Photo'}
                 </button>
@@ -286,7 +379,7 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
                 <button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold shadow-xs transition active:scale-98"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                 >
                   <Camera className="w-4 h-4" />
                   {t.takePhoto}
@@ -294,7 +387,7 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold border border-stone-300 transition active:scale-98"
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold border border-stone-300 transition-colors cursor-pointer"
                 >
                   <Upload className="w-4 h-4 text-stone-600" />
                   {t.browseFile}
@@ -349,7 +442,7 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
                   key={c}
                   type="button"
                   onClick={() => setCropType(c)}
-                  className={`text-[10px] px-2 py-0.5 rounded-md border transition ${
+                  className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer ${
                     cropType.toLowerCase().includes(c.toLowerCase())
                       ? 'bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold'
                       : 'bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200'
@@ -371,9 +464,9 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
                 type="button"
                 onClick={handleUseLocation}
                 disabled={isLocating}
-                className="text-[11px] text-emerald-700 hover:text-emerald-800 font-medium flex items-center gap-1 transition"
+                className="text-[11px] text-emerald-700 hover:text-emerald-800 font-medium flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
               >
-                <Navigation className="w-3 h-3" />
+                <Navigation className={`w-3 h-3 ${isLocating ? 'animate-spin text-emerald-600' : ''}`} />
                 {isLocating ? t.detectingLocation : t.useMyLocation}
               </button>
             </div>
@@ -382,16 +475,26 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
               <input
                 type="text"
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                onChange={(e) => {
+                  setLocation(e.target.value);
+                  setLocationNotice(null);
+                }}
                 placeholder={t.locationPlaceholder}
                 className="w-full text-xs pl-9 pr-3.5 py-2.5 rounded-xl border border-stone-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 bg-stone-50/50"
               />
             </div>
-            <p className="text-[10px] text-stone-500 mt-1">
-              {language === 'id'
-                ? 'Digunakan Context Agent untuk menarik data cuaca mikroklimat Open-Meteo.'
-                : 'Used by Context Agent to fetch Open-Meteo microclimate weather.'}
-            </p>
+            {locationNotice ? (
+              <p className="text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200/80 rounded-lg px-2.5 py-1 mt-1.5 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                <span>{locationNotice}</span>
+              </p>
+            ) : (
+              <p className="text-[10px] text-stone-500 mt-1">
+                {language === 'id'
+                  ? 'Digunakan Context Agent untuk menarik data cuaca mikroklimat Open-Meteo.'
+                  : 'Used by Context Agent to fetch Open-Meteo microclimate weather.'}
+              </p>
+            )}
           </div>
         </div>
 
@@ -414,11 +517,11 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-700 to-lime-600 hover:from-emerald-800 hover:to-lime-700 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 active:scale-99 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-700 to-lime-600 hover:from-emerald-800 hover:to-lime-700 text-white font-bold text-sm shadow-md transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
         >
           {isLoading ? (
             <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
               <span>{t.diagnosingButton}</span>
             </>
           ) : (
@@ -431,4 +534,6 @@ export const PhotoUploader = React.memo<PhotoUploaderProps>(function PhotoUpload
       </form>
     </div>
   );
-});
+};
+
+export const PhotoUploader = React.memo(PhotoUploaderComponent);

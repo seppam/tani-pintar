@@ -9,11 +9,7 @@ interface HeaderProps {
   onReset?: () => void;
 }
 
-export const Header = React.memo<HeaderProps>(function Header({
-  language,
-  onLanguageChange,
-  onReset,
-}) {
+const HeaderComponent: React.FC<HeaderProps> = ({ language, onLanguageChange, onReset }) => {
   const t = translations[language];
 
   return (
@@ -23,7 +19,7 @@ export const Header = React.memo<HeaderProps>(function Header({
           onClick={onReset}
           className="flex items-center gap-2.5 cursor-pointer select-none group"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-lime-500 p-0.5 shadow-md flex items-center justify-center transform transition group-hover:scale-105">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-lime-500 p-0.5 shadow-md flex items-center justify-center transform transition-transform group-hover:scale-105">
             <div className="w-full h-full bg-emerald-950 rounded-[10px] flex items-center justify-center">
               <Sprout className="w-6 h-6 text-emerald-400" />
             </div>
@@ -50,7 +46,7 @@ export const Header = React.memo<HeaderProps>(function Header({
             <button
               type="button"
               onClick={() => onLanguageChange('id')}
-              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
                 language === 'id'
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-emerald-300 hover:text-white'
@@ -63,7 +59,7 @@ export const Header = React.memo<HeaderProps>(function Header({
             <button
               type="button"
               onClick={() => onLanguageChange('en')}
-              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
                 language === 'en'
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-emerald-300 hover:text-white'
@@ -83,4 +79,7 @@ export const Header = React.memo<HeaderProps>(function Header({
       </div>
     </header>
   );
-});
+};
+
+export const Header = React.memo(HeaderComponent);
+

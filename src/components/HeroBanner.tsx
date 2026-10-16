@@ -7,7 +7,7 @@ interface HeroBannerProps {
   language: Language;
 }
 
-export const HeroBanner = React.memo<HeroBannerProps>(function HeroBanner({ language }) {
+export const HeroBanner = React.memo(function HeroBanner({ language }: HeroBannerProps) {
   const t = translations[language];
 
   return (

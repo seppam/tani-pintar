@@ -61,7 +61,6 @@ export default function App() {
             language,
           },
           (traceUpdate) => {
-            // Only update trace state - do NOT auto-scroll here to prevent jumping
             setLiveTrace(traceUpdate);
           }
         );
@@ -69,10 +68,10 @@ export default function App() {
         setAnalysisResult(data);
         setLiveTrace(data.trace);
 
-        // Scroll once to the result at the very end
+        // Smooth scroll to results once at the very end
         setTimeout(() => {
           resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 150);
+        }, 200);
       } catch (err: unknown) {
         console.error('Diagnosis failed:', err);
         const msg = err instanceof Error ? err.message : 'Unknown error during analysis';
@@ -97,7 +96,7 @@ export default function App() {
       />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6 sm:py-8 space-y-6">
-        {/* Hero Banner for Farmers (Memoized) */}
+        {/* Hero Banner for Farmers - Memoized */}
         <HeroBanner language={language} />
 
         {/* Error Notification */}
@@ -123,21 +122,17 @@ export default function App() {
           </div>
         )}
 
-        {/* Upload Form (Memoized) */}
+        {/* Upload Form - Memoized */}
         <PhotoUploader
           language={language}
           onAnalyze={handleAnalyze}
           isLoading={isLoading}
         />
 
-        {/* Persistent Results Container with reserved min-height */}
+        {/* Persistent Results Container */}
         <div
           ref={resultsRef}
-          className={
-            isLoading || analysisResult || liveTrace.length > 0
-              ? 'min-h-[440px] space-y-6 pt-2'
-              : 'min-h-0'
-          }
+          className={`space-y-6 ${isLoading || analysisResult || errorMessage ? 'min-h-[460px]' : ''}`}
         >
           {/* Pipeline Multi-Agent Progress during loading */}
           {isLoading && (
@@ -146,7 +141,7 @@ export default function App() {
 
           {/* Results Section */}
           {analysisResult && (
-            <div className="space-y-6">
+            <div className="space-y-6 pt-2">
               {/* Results Header Action Bar */}
               <div className="flex items-center justify-between bg-white rounded-2xl p-4 border border-stone-200 shadow-xs">
                 <div>
@@ -163,7 +158,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold border border-stone-200 transition cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold border border-stone-200 transition-colors cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>{t.resetButton}</span>

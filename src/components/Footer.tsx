@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sprout, Heart, ShieldCheck } from 'lucide-react';
+import { Sprout } from 'lucide-react';
 import { Language } from '../types';
 
 interface FooterProps {
@@ -20,8 +20,8 @@ const FooterComponent: React.FC<FooterProps> = ({ language }) => {
         </div>
         <p className="text-[11px] text-stone-500 max-w-md mx-auto leading-relaxed">
           {language === 'id'
-            ? 'Didukung arsitektur multi-agen cerdas dengan pemantauan mikroklimat Open-Meteo & kepatuhan standar Penyuluh Pertanian Lapangan (PPL).'
-            : 'Powered by multi-agent reasoning, Open-Meteo microclimate forecasting, and agricultural extension compliance.'}
+            ? 'Rekomendasi AI, bukan pengganti penyuluh pertanian (PPL).'
+            : 'AI recommendations, not a substitute for a local agricultural extension officer (PPL).'}
         </p>
         <div className="text-[10px] text-stone-400 pt-1">
           © {new Date().getFullYear()} Tani Pintar. {language === 'id' ? 'Dibuat untuk kedaulatan pangan petani.' : 'Built for farmer prosperity.'}

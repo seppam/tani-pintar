@@ -1,0 +1,161 @@
+Starting verification of Rice Blast and Corn Armyworm samples...
+
+====================================================
+TESTING SAMPLE: Padi - Blas Daun (Rice Leaf Blast) (Padi Sawah (Oryza sativa) - Penyakit Blas Daun (Pyricularia oryzae))
+Location: Subang, Jawa Barat
+Candidate Models: gemini-3.8-flash -> gemini-flash-latest -> gemini-flash-lite-latest
+====================================================
+
+--> [LIVE PROGRESS] Active agent: Vision Diagnostician
+[Vision Diagnostician] Calling Gemini using model: "gemini-3.8-flash" (Attempt 1/3)
+[Vision Diagnostician] Model "gemini-3.8-flash" attempt 1 failed: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\nPlease retry in 10h49m58.351619266s.","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3.8-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"38998s"}]}}
+[Vision Diagnostician] Transient error ({"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\nPlease retry in 10h49m58.351619266s.","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3.8-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"38998s"}]}}), retrying "gemini-3.8-flash" in 800ms...
+[Vision Diagnostician] Calling Gemini using model: "gemini-3.8-flash" (Attempt 2/3)
+[Vision Diagnostician] Model "gemini-3.8-flash" attempt 2 failed: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\nPlease retry in 10h49m57.29675863s.","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"model":"gemini-3.8-flash","location":"global"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"38997s"}]}}
+[Vision Diagnostician] Transient error ({"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\nPlease retry in 10h49m57.29675863s.","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"model":"gemini-3.8-flash","location":"global"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"38997s"}]}}), retrying "gemini-3.8-flash" in 1600ms...
+[Vision Diagnostician] Calling Gemini using model: "gemini-3.8-flash" (Attempt 3/3)
+[Vision Diagnostician] Model "gemini-3.8-flash" attempt 3 failed: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\nPlease retry in 10h49m55.384329181s.","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3.8-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"38995s"}]}}
+[Vision Diagnostician] Calling Gemini using model: "gemini-flash-latest" (Attempt 1/3)
+[Vision Diagnostician] Model "gemini-flash-latest" attempt 1 failed: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\nPlease retry in 10h49m55.134735737s.","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3.8-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"38995s"}]}}
+[Vision Diagnostician] Transient error ({"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\nPlease retry in 10h49m55.134735737s.","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3.8-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"38995s"}]}}), retrying "gemini-flash-latest" in 800ms...
+[Vision Diagnostician] Calling Gemini using model: "gemini-flash-latest" (Attempt 2/3)
+[Vision Diagnostician] Model "gemini-flash-latest" attempt 2 failed: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\nPlease retry in 10h49m54.098296915s.","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3.8-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"38994s"}]}}
+[Vision Diagnostician] Transient error ({"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\nPlease retry in 10h49m54.098296915s.","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3.8-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"38994s"}]}}), retrying "gemini-flash-latest" in 1600ms...
+[Vision Diagnostician] Calling Gemini using model: "gemini-flash-latest" (Attempt 3/3)
+[Vision Diagnostician] Model "gemini-flash-latest" attempt 3 failed: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\nPlease retry in 10h49m52.159207886s.","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-3.8-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"38992s"}]}}
+[Vision Diagnostician] Calling Gemini using model: "gemini-flash-lite-latest" (Attempt 1/3)
+[Vision Diagnostician] Model "gemini-flash-lite-latest" responded successfully (2399 tokens).
+AGENT 1 [Vision Diagnostician] Completed (Model: gemini-flash-lite-latest)
+--> [LIVE PROGRESS] Active agent: Context Agent
+[Context Agent Search Grounding] Calling Google Search Grounding with model: "gemini-flash-lite-latest" (Attempt 1/2)
+[Context Agent Search Grounding] Grounding with "gemini-flash-lite-latest" attempt 1 failed: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]}]}}
+[Context Agent Search Grounding] Calling Google Search Grounding with model: "gemini-3.8-flash" (Attempt 1/2)
+[Context Agent Search Grounding] Grounding with "gemini-3.8-flash" attempt 1 failed: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]}]}}
+[Context Agent Search Grounding] Calling Google Search Grounding with model: "gemini-flash-latest" (Attempt 1/2)
+[Context Agent Search Grounding] Grounding with "gemini-flash-latest" attempt 1 failed: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]}]}}
+[Context Agent Search Grounding] Search grounding failed on all models: [gemini-flash-lite-latest]: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]}]}} | [gemini-3.8-flash]: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]}]}} | [gemini-flash-latest]: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]}]}}. Continuing without grounding.
+[Context Agent (Structured)] Calling Gemini using model: "gemini-flash-lite-latest" (Attempt 1/3)
+[Context Agent (Structured)] Model "gemini-flash-lite-latest" responded successfully (510 tokens).
+AGENT 2 [Context Agent] Completed (Model: gemini-flash-lite-latest)
+--> [LIVE PROGRESS] Active agent: Planner Agent
+[Planner Agent] Calling Gemini using model: "gemini-flash-lite-latest" (Attempt 1/3)
+[Planner Agent] Model "gemini-flash-lite-latest" responded successfully (1274 tokens).
+AGENT 3 [Planner Agent] Completed (Model: gemini-flash-lite-latest)
+--> [LIVE PROGRESS] Active agent: Safety Checker
+[Safety Checker] Calling Gemini using model: "gemini-flash-lite-latest" (Attempt 1/3)
+[Safety Checker] Model "gemini-flash-lite-latest" responded successfully (542 tokens).
+AGENT 4 [Safety Checker] Completed (Model: gemini-flash-lite-latest)
+
+----------------------------------------------------
+ANALYSIS RESULT FOR: Padi - Blas Daun (Rice Leaf Blast)
+Total Duration: 68587 ms
+----------------------------------------------------
+Agent 1: Vision Diagnostician
+  - Status: COMPLETED
+  - Model Used: gemini-flash-lite-latest
+  - Duration: 40828 ms
+  - Tokens: Total = 2399 (Prompt: 0, Candidates: 325)
+  - Estimated Cost: price n/a
+Agent 2: Context Agent
+  - Status: COMPLETED
+  - Model Used: gemini-flash-lite-latest
+  - Duration: 12786 ms
+  - Tokens: Total = 510 (Prompt: 261, Candidates: 249)
+  - Estimated Cost: price n/a
+  - Grounding Sources Returned: NO / Unavailable
+Agent 3: Planner Agent
+  - Status: COMPLETED
+  - Model Used: gemini-flash-lite-latest
+  - Duration: 8064 ms
+  - Tokens: Total = 1274 (Prompt: 418, Candidates: 856)
+  - Estimated Cost: price n/a
+Agent 4: Safety Checker
+  - Status: COMPLETED
+  - Model Used: gemini-flash-lite-latest
+  - Duration: 6905 ms
+  - Tokens: Total = 542 (Prompt: 248, Candidates: 294)
+  - Estimated Cost: price n/a
+
+Total Tokens for Run:
+  Prompt: 927, Candidates: 1724, Total: 4725
+  Total Estimated Cost: price n/a
+
+Diagnosis Summary:
+  Primary: Penyakit Blast Padi (95% confidence)
+  Disease Risk: moderate
+  Action Plan Steps: 4
+  Safety Warning Required: false
+====================================================
+
+====================================================
+TESTING SAMPLE: Jagung - Ulat Grayak FAW (Fall Armyworm) (Jagung Pipil (Zea mays) - Ulat Grayak Jagung / FAW (Spodoptera frugiperda))
+Location: Lampung Timur, Lampung
+Candidate Models: gemini-3.8-flash -> gemini-flash-latest -> gemini-flash-lite-latest
+====================================================
+
+--> [LIVE PROGRESS] Active agent: Vision Diagnostician
+[Vision Diagnostician] Calling Gemini using model: "gemini-flash-lite-latest" (Attempt 1/3)
+[Vision Diagnostician] Model "gemini-flash-lite-latest" responded successfully (2394 tokens).
+AGENT 1 [Vision Diagnostician] Completed (Model: gemini-flash-lite-latest)
+--> [LIVE PROGRESS] Active agent: Context Agent
+[Context Agent Search Grounding] Calling Google Search Grounding with model: "gemini-flash-lite-latest" (Attempt 1/2)
+[Context Agent Search Grounding] Grounding with "gemini-flash-lite-latest" attempt 1 failed: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]}]}}
+[Context Agent Search Grounding] Calling Google Search Grounding with model: "gemini-3.8-flash" (Attempt 1/2)
+[Context Agent Search Grounding] Grounding with "gemini-3.8-flash" attempt 1 failed: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]}]}}
+[Context Agent Search Grounding] Calling Google Search Grounding with model: "gemini-flash-latest" (Attempt 1/2)
+[Context Agent Search Grounding] Grounding with "gemini-flash-latest" attempt 1 failed: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]}]}}
+[Context Agent Search Grounding] Search grounding failed on all models: [gemini-flash-lite-latest]: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]}]}} | [gemini-3.8-flash]: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]}]}} | [gemini-flash-latest]: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]}]}}. Continuing without grounding.
+[Context Agent (Structured)] Calling Gemini using model: "gemini-flash-lite-latest" (Attempt 1/3)
+[Context Agent (Structured)] Model "gemini-flash-lite-latest" responded successfully (520 tokens).
+AGENT 2 [Context Agent] Completed (Model: gemini-flash-lite-latest)
+--> [LIVE PROGRESS] Active agent: Planner Agent
+[Planner Agent] Calling Gemini using model: "gemini-flash-lite-latest" (Attempt 1/3)
+[Planner Agent] Model "gemini-flash-lite-latest" responded successfully (1362 tokens).
+AGENT 3 [Planner Agent] Completed (Model: gemini-flash-lite-latest)
+--> [LIVE PROGRESS] Active agent: Safety Checker
+[Safety Checker] Calling Gemini using model: "gemini-flash-lite-latest" (Attempt 1/3)
+[Safety Checker] Model "gemini-flash-lite-latest" responded successfully (525 tokens).
+AGENT 4 [Safety Checker] Completed (Model: gemini-flash-lite-latest)
+
+----------------------------------------------------
+ANALYSIS RESULT FOR: Jagung - Ulat Grayak FAW (Fall Armyworm)
+Total Duration: 108638 ms
+----------------------------------------------------
+Agent 1: Vision Diagnostician
+  - Status: COMPLETED
+  - Model Used: gemini-flash-lite-latest
+  - Duration: 39559 ms
+  - Tokens: Total = 2394 (Prompt: 0, Candidates: 321)
+  - Estimated Cost: price n/a
+Agent 2: Context Agent
+  - Status: COMPLETED
+  - Model Used: gemini-flash-lite-latest
+  - Duration: 14592 ms
+  - Tokens: Total = 520 (Prompt: 268, Candidates: 252)
+  - Estimated Cost: price n/a
+  - Grounding Sources Returned: NO / Unavailable
+Agent 3: Planner Agent
+  - Status: COMPLETED
+  - Model Used: gemini-flash-lite-latest
+  - Duration: 17536 ms
+  - Tokens: Total = 1362 (Prompt: 409, Candidates: 953)
+  - Estimated Cost: price n/a
+Agent 4: Safety Checker
+  - Status: COMPLETED
+  - Model Used: gemini-flash-lite-latest
+  - Duration: 36951 ms
+  - Tokens: Total = 525 (Prompt: 252, Candidates: 273)
+  - Estimated Cost: price n/a
+
+Total Tokens for Run:
+  Prompt: 929, Candidates: 1799, Total: 4801
+  Total Estimated Cost: price n/a
+
+Diagnosis Summary:
+  Primary: Penggerek Batang Jagung dan Daun (95% confidence)
+  Disease Risk: high
+  Action Plan Steps: 4
+  Safety Warning Required: false
+====================================================
+
+ALL SAMPLE VERIFICATIONS COMPLETED SUCCESSFULLY!

@@ -13,6 +13,9 @@ import {
   ShieldAlert,
   Code2,
   Loader2,
+  Globe,
+  ExternalLink,
+  Coins,
 } from 'lucide-react';
 import { AgentTraceStep, Language } from '../types';
 import { translations } from '../i18n/translations';
@@ -109,8 +112,15 @@ const AgentTraceStepRow = React.memo(
 
             {/* Model used badge */}
             {step.modelUsed && (
-              <span className="text-[10px] font-mono text-sky-300 bg-sky-950/80 px-2 py-0.5 rounded-md border border-sky-800 hidden sm:inline">
+              <span className="text-[10px] font-mono text-sky-300 bg-sky-950/80 px-2 py-0.5 rounded-md border border-sky-800">
                 {step.modelUsed}
+              </span>
+            )}
+
+            {/* Token usage & cost badge */}
+            {step.tokenUsage && (
+              <span className="text-[10px] font-mono text-amber-300 bg-amber-950/80 px-2 py-0.5 rounded-md border border-amber-800 hidden md:inline-block">
+                {step.tokenUsage.totalTokens.toLocaleString()} tok • {step.tokenUsage.estimatedCostUsd !== null && step.tokenUsage.estimatedCostUsd !== undefined ? `$${step.tokenUsage.estimatedCostUsd.toFixed(5)}` : 'price n/a'}
               </span>
             )}
 
@@ -155,6 +165,41 @@ const AgentTraceStepRow = React.memo(
               </div>
             )}
 
+            {/* Token Usage & Cost Breakdown */}
+            {step.tokenUsage && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-bold text-amber-400">
+                  <span className="flex items-center gap-1">
+                    <Coins className="w-3 h-3" />
+                    <span>Tokens & Cost</span>
+                  </span>
+                  <span className="text-stone-300 font-mono text-[10px]">
+                    Estimated: {step.tokenUsage.estimatedCostUsd !== null && step.tokenUsage.estimatedCostUsd !== undefined
+                      ? `$${step.tokenUsage.estimatedCostUsd.toFixed(5)} USD`
+                      : 'price n/a'}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-stone-900 border border-stone-800 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono text-stone-300">
+                  <div>
+                    <span className="text-stone-500 block">Prompt:</span>
+                    <span className="text-white font-bold">{step.tokenUsage.promptTokens.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-stone-500 block">Candidates:</span>
+                    <span className="text-white font-bold">{step.tokenUsage.candidatesTokens.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-stone-500 block">Thoughts:</span>
+                    <span className="text-white font-bold">{((step.tokenUsage.thoughtsTokens || 0)).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-stone-500 block">Total Tokens:</span>
+                    <span className="text-emerald-400 font-bold">{step.tokenUsage.totalTokens.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Tool Invocations if any */}
             {step.toolCalls && step.toolCalls.length > 0 && (
               <div className="space-y-1.5">
@@ -188,6 +233,37 @@ const AgentTraceStepRow = React.memo(
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Sources section for Context Agent or grounded steps */}
+            {step.agentId === 'context' && (
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-bold text-sky-400 flex items-center gap-1">
+                  <Globe className="w-3 h-3" />
+                  <span>Sources</span>
+                </span>
+                {step.sources && step.sources.length > 0 ? (
+                  <div className="p-2.5 rounded-lg bg-stone-900 border border-stone-800 space-y-1.5">
+                    {step.sources.map((src, sIdx) => (
+                      <div key={sIdx} className="flex items-center gap-1.5 text-[11px]">
+                        <ExternalLink className="w-3 h-3 text-sky-400 flex-shrink-0" />
+                        <a
+                          href={src.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sky-300 hover:text-sky-100 underline truncate font-mono text-[10px]"
+                        >
+                          {src.title || src.url}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-lg bg-stone-900/80 border border-stone-800 text-[11px] text-stone-400 italic font-mono">
+                    Search grounding unavailable
+                  </div>
+                )}
               </div>
             )}
 
@@ -233,6 +309,8 @@ const AgentTraceStepRow = React.memo(
       prev.step.rawOutput === next.step.rawOutput &&
       prev.step.error === next.step.error &&
       prev.step.modelUsed === next.step.modelUsed &&
+      prev.step.tokenUsage?.totalTokens === next.step.tokenUsage?.totalTokens &&
+      prev.step.tokenUsage?.estimatedCostUsd === next.step.tokenUsage?.estimatedCostUsd &&
       prev.isExpanded === next.isExpanded &&
       prev.isCopied === next.isCopied &&
       prev.language === next.language
@@ -266,6 +344,22 @@ const AgentTraceModalComponent: React.FC<AgentTraceModalProps> = ({
     setExpandedAgent((prev) => (prev === agentId ? null : agentId));
   }, []);
 
+  const totalTokens = trace.reduce((acc, s) => acc + (s.tokenUsage?.totalTokens || 0), 0);
+  let allPriced = true;
+  let totalCostSum = 0;
+  let hasAnyCompleted = false;
+
+  for (const s of trace) {
+    if (s.status === 'completed' && s.tokenUsage) {
+      hasAnyCompleted = true;
+      if (s.tokenUsage.estimatedCostUsd !== null && s.tokenUsage.estimatedCostUsd !== undefined) {
+        totalCostSum += s.tokenUsage.estimatedCostUsd;
+      } else {
+        allPriced = false;
+      }
+    }
+  }
+
   return (
     <div className="bg-stone-900 text-stone-100 rounded-2xl border border-stone-800 shadow-lg overflow-hidden transition-colors">
       {/* Accordion Toggle Bar */}
@@ -279,13 +373,23 @@ const AgentTraceModalComponent: React.FC<AgentTraceModalProps> = ({
             <Terminal className="w-4 h-4" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="font-extrabold text-sm sm:text-base text-white">
                 {t.agentTraceHeader}
               </span>
               <span className="text-[10px] font-mono bg-stone-800 text-emerald-400 px-2 py-0.5 rounded-full border border-stone-700">
                 {overallDurationMs}ms total
               </span>
+              {totalTokens > 0 && (
+                <span className="text-[10px] font-mono bg-stone-800 text-sky-300 px-2 py-0.5 rounded-full border border-stone-700">
+                  {totalTokens.toLocaleString()} tokens
+                </span>
+              )}
+              {hasAnyCompleted && totalTokens > 0 && (
+                <span className="text-[10px] font-mono bg-stone-800 text-amber-300 px-2 py-0.5 rounded-full border border-stone-700">
+                  {allPriced ? `$${totalCostSum.toFixed(5)}` : 'price n/a'}
+                </span>
+              )}
             </div>
             <p className="text-xs text-stone-400 mt-0.5">
               {t.agentTraceSubtitle}

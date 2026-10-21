@@ -8,16 +8,56 @@ import {
   AgentTraceStep,
   WeatherData,
   Language,
+  TokenUsage,
 } from '../types';
 
 // ============================================================================
-// 1. MODEL CONSTANTS (single place at top of file)
-// Primary: "gemini-flash-latest", with automatic fallback to "gemini-2.5-flash"
-// No deprecated models or unlisted preview dates.
+// 1. MODEL CANDIDATES & RELIABILITY CONFIGURATION
+// Ordered sequence: gemini-3.8-flash -> gemini-flash-latest -> gemini-flash-lite-latest
+// "gemini-2.5-flash" has been completely removed.
 // ============================================================================
-export const MODEL = 'gemini-flash-latest';
-export const FALLBACK_MODEL = 'gemini-2.5-flash';
-export const RESILIENT_FALLBACK_MODEL = 'gemini-flash-lite-latest';
+export const CANDIDATE_MODELS = [
+  'gemini-3.8-flash',
+  'gemini-flash-latest',
+  'gemini-flash-lite-latest',
+] as const;
+
+export type CandidateModel = (typeof CANDIDATE_MODELS)[number];
+
+// Official model token pricing map (USD per 1,000,000 tokens).
+// Models without published pricing under those exact names are set to null.
+export const MODEL_PRICING: Record<string, { input: number; output: number } | null> = {
+  'gemini-3.8-flash': { input: 0.75, output: 3.75 }, // official price through 2026-12-31; becomes 1.50 / 7.50 from 2027-01-01
+  'gemini-flash-latest': null,
+  'gemini-flash-lite-latest': null,
+};
+
+/**
+ * Compute estimated cost in USD based on official pricing table.
+ * Output tokens for pricing = candidatesTokenCount + (thoughtsTokenCount || 0).
+ * Returns null if model price is unknown ("price n/a").
+ */
+export function computeTokenCost(
+  model: string,
+  promptTokens: number,
+  candidatesTokens: number,
+  thoughtsTokens = 0
+): number | null {
+  const pricing = MODEL_PRICING[model];
+  if (!pricing) {
+    return null;
+  }
+  const outputTokensForPricing = candidatesTokens + thoughtsTokens;
+  const inputCost = (promptTokens / 1_000_000) * pricing.input;
+  const outputCost = (outputTokensForPricing / 1_000_000) * pricing.output;
+  return inputCost + outputCost;
+}
+
+// Primary model for initial execution
+export const MODEL = CANDIDATE_MODELS[0];
+
+// Module-level variable: remember the last model that succeeded and try it first on next run
+let lastSuccessfulModel: string = CANDIDATE_MODELS[0];
 
 export interface DiagnoseRequestPayload {
   imageBase64: string;
@@ -44,6 +84,24 @@ const KNOWN_LOCATIONS: Record<string, { lat: number; lon: number; name: string }
   makassar: { lat: -5.14, lon: 119.43, name: 'Makassar, Sulawesi Selatan' },
 };
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return (
+    msg.includes('503') ||
+    msg.includes('429') ||
+    msg.includes('unavailable') ||
+    msg.includes('resource_exhausted') ||
+    msg.includes('overloaded') ||
+    msg.includes('quota') ||
+    msg.includes('rate limit') ||
+    msg.includes('high demand')
+  );
+}
+
 /**
  * Resolve location query to latitude & longitude
  */
@@ -59,32 +117,34 @@ export async function resolveCoordinates(
     };
   }
 
-  const clean = query.trim().toLowerCase();
-  for (const [key, val] of Object.entries(KNOWN_LOCATIONS)) {
-    if (clean.includes(key)) {
-      return val;
-    }
-  }
-
-  // Geocoding via Open-Meteo free geocoding API
-  try {
-    const encoded = encodeURIComponent(query.trim());
-    const res = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encoded}&count=1&language=en&format=json`
-    );
-    if (res.ok) {
-      const data = await res.json();
-      if (data.results && data.results.length > 0) {
-        const top = data.results[0];
-        return {
-          lat: top.latitude,
-          lon: top.longitude,
-          name: `${top.name}${top.admin1 ? ', ' + top.admin1 : ''}${top.country ? ', ' + top.country : ''}`,
-        };
+  const clean = (query || '').trim().toLowerCase();
+  if (clean) {
+    for (const [key, val] of Object.entries(KNOWN_LOCATIONS)) {
+      if (clean.includes(key)) {
+        return val;
       }
     }
-  } catch (err) {
-    console.warn('Open-Meteo geocoding request failed:', err);
+
+    // Geocoding via Open-Meteo free geocoding API
+    try {
+      const encoded = encodeURIComponent(query.trim());
+      const res = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encoded}&count=1&language=en&format=json`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.results && data.results.length > 0) {
+          const top = data.results[0];
+          return {
+            lat: top.latitude,
+            lon: top.longitude,
+            name: `${top.name}${top.admin1 ? ', ' + top.admin1 : ''}${top.country ? ', ' + top.country : ''}`,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Open-Meteo geocoding request failed:', err);
+    }
   }
 
   // Default fallback (Subang, West Java)
@@ -104,12 +164,11 @@ function decodeWeatherCode(code: number, lang: Language): string {
   if (code >= 61 && code <= 65) return isId ? 'Hujan Sedang-Lebat' : 'Rain';
   if (code >= 80 && code <= 82) return isId ? 'Hujan Guyur / Deras' : 'Rain showers';
   if (code >= 95) return isId ? 'Badai Petir' : 'Thunderstorm';
-  return isId ? 'Berawan / Normal' : 'Cloudy / Normal';
+  return isId ? 'Berawan / Lembap' : 'Cloudy / Humid';
 }
 
 /**
- * Fetch weather from Open-Meteo from the client
- * If it fails, continue and return null as required.
+ * Fetch weather from Open-Meteo with null-safety
  */
 export async function fetchWeatherFromClient(
   lat: number,
@@ -117,36 +176,48 @@ export async function fetchWeatherFromClient(
   locationName: string,
   lang: Language
 ): Promise<WeatherData | null> {
+  if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) {
+    return null;
+  }
+
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,precipitation_sum&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&timezone=auto`;
     const res = await fetch(url);
     if (!res.ok) {
-      console.warn(`Open-Meteo forecast failed with status: ${res.status}`);
+      console.warn(`Open-Meteo returned status ${res.status}, continuing with weather: null`);
       return null;
     }
     const data = await res.json();
-    const current = data.current || {};
-    const daily = data.daily || {};
+    const current = data.current;
+    const daily = data.daily;
 
-    const forecast = daily && daily.time ? daily.time.slice(0, 3).map((dateStr: string, idx: number) => {
-      const d = new Date(dateStr);
-      const dayName = d.toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-US', { weekday: 'short' });
-      return {
-        day: dayName,
-        tempMax: Math.round(daily.temperature_2m_max?.[idx] ?? 31),
-        tempMin: Math.round((daily.temperature_2m_max?.[idx] ?? 31) - 6),
-        rainProb: Math.round((daily.precipitation_sum?.[idx] ?? 0) > 0 ? 70 : 25),
-      };
-    }) : undefined;
+    if (!current) {
+      return null;
+    }
+
+    const forecast =
+      daily && daily.time
+        ? daily.time.slice(0, 3).map((dateStr: string, idx: number) => {
+            const d = new Date(dateStr);
+            const dayName = d.toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-US', {
+              weekday: 'short',
+            });
+            return {
+              day: dayName,
+              tempMax: Math.round(daily.temperature_2m_max?.[idx] ?? 31),
+              tempMin: Math.round(daily.temperature_2m_max?.[idx] ? daily.temperature_2m_max[idx] - 7 : 24),
+              rainProb: Math.round(daily.precipitation_sum?.[idx] ? Math.min(100, daily.precipitation_sum[idx] * 12) : 50),
+            };
+          })
+        : undefined;
 
     return {
       locationName: locationName || `${lat.toFixed(2)}, ${lon.toFixed(2)}`,
       latitude: lat,
       longitude: lon,
       temperature: Math.round((current.temperature_2m ?? 28) * 10) / 10,
-      relativeHumidity: Math.round(current.relative_humidity_2m ?? 80),
-      precipitation: Math.round((current.precipitation ?? 0) * 10) / 10,
-      precipitationProbability: (daily?.precipitation_sum?.[0] ?? 0) > 0 ? 75 : 30,
+      relativeHumidity: Math.round(current.relative_humidity_2m ?? 82),
+      precipitation: current.precipitation ?? 0,
       weatherCode: current.weather_code ?? 3,
       weatherDescription: decodeWeatherCode(current.weather_code ?? 3, lang),
       windSpeed: Math.round((current.wind_speed_10m ?? 8) * 10) / 10,
@@ -219,130 +290,178 @@ export function cleanAndParseJSON<T>(raw: string, stepName = 'Agent'): T {
   }
 }
 
-// Cached available models list and active model
-let cachedAvailableModels: string[] | null = null;
-let activeModel: string = MODEL;
-
 /**
- * 4. STARTUP CHECK: calls ai.models.list() and tests primary model availability.
- */
-export async function logStartupAvailableModels(ai: GoogleGenAI): Promise<string[]> {
-  if (cachedAvailableModels !== null) {
-    return cachedAvailableModels;
-  }
-
-  try {
-    console.log('[Gemini Startup Check] Calling ai.models.list() to discover available models for this API key...');
-    const pager = await ai.models.list();
-    const available: string[] = [];
-
-    // Safely iterate through available models list
-    try {
-      if (pager && typeof (pager as any)[Symbol.asyncIterator] === 'function') {
-        for await (const m of pager) {
-          if (m.name) {
-            available.push(m.name.replace(/^models\//, ''));
-          }
-        }
-      } else if (pager && Array.isArray((pager as any).page)) {
-        for (const m of (pager as any).page) {
-          if (m.name) {
-            available.push(m.name.replace(/^models\//, ''));
-          }
-        }
-      }
-    } catch (iterErr) {
-      console.warn('[Gemini Startup Check] Pager iteration note:', iterErr);
-    }
-
-    cachedAvailableModels = available;
-    console.log(
-      `[Gemini Startup Check] ${available.length} models available for this API key:`,
-      available
-    );
-
-    // Fast one-token test request to verify if MODEL ("gemini-flash-latest") is currently accepted
-    try {
-      await ai.models.generateContent({
-        model: MODEL,
-        contents: 'ping',
-      });
-      activeModel = MODEL;
-      console.log(`[Gemini Startup Check] Primary model "${MODEL}" is verified and active.`);
-      return available;
-    } catch (testErr: unknown) {
-      const msg = testErr instanceof Error ? testErr.message : String(testErr);
-      console.warn(
-        `[Gemini Startup Check] Primary model "${MODEL}" was not accepted (${msg}). Testing fallback model "${FALLBACK_MODEL}"...`
-      );
-
-      try {
-        await ai.models.generateContent({
-          model: FALLBACK_MODEL,
-          contents: 'ping',
-        });
-        activeModel = FALLBACK_MODEL;
-        console.log(`[Gemini Startup Check] Fallback model "${FALLBACK_MODEL}" is verified and active.`);
-        return available;
-      } catch (fbErr: unknown) {
-        const fbMsg = fbErr instanceof Error ? fbErr.message : String(fbErr);
-        console.warn(
-          `[Gemini Startup Check] Fallback model "${FALLBACK_MODEL}" was not accepted (${fbMsg}). Setting active model to "${RESILIENT_FALLBACK_MODEL}".`
-        );
-        activeModel = RESILIENT_FALLBACK_MODEL;
-      }
-    }
-
-    return available;
-  } catch (err) {
-    console.warn(
-      '[Gemini Startup Check] ai.models.list() query failed or restricted. Proceeding with fallback logic:',
-      err instanceof Error ? err.message : String(err)
-    );
-    cachedAvailableModels = [];
-    return [];
-  }
-}
-
-/**
- * 2. EXECUTE GEMINI CALL WITH AUTOMATIC FALLBACK:
- * Attempts activeModel (defaults to MODEL = "gemini-flash-latest"). If rejected (e.g. 404 NOT_FOUND, 503 UNAVAILABLE, 429),
- * automatically falls back to FALLBACK_MODEL ("gemini-2.5-flash"), then RESILIENT_FALLBACK_MODEL ("gemini-flash-lite-latest").
+ * Execute Gemini call with short backoff retry (800ms, 1600ms) for 503/429
+ * and automatic fallback across CANDIDATE_MODELS (gemini-3.8-flash -> gemini-flash-latest -> gemini-flash-lite-latest).
+ * Remembers the last successful model across agents and future pipeline runs.
  */
 async function callGeminiWithFallback(
   ai: GoogleGenAI,
   contents: Parameters<typeof ai.models.generateContent>[0]['contents'],
   config: Parameters<typeof ai.models.generateContent>[0]['config'],
   stepName: string
-): Promise<{ text: string; modelUsed: string }> {
-  // Ordered sequence of candidate models to attempt
-  const candidates = Array.from(
-    new Set([activeModel, MODEL, FALLBACK_MODEL, RESILIENT_FALLBACK_MODEL])
-  );
-
+): Promise<{ text: string; modelUsed: string; usage: TokenUsage }> {
+  // Ordered sequence starting with lastSuccessfulModel, then remaining models
+  const candidates = Array.from(new Set([lastSuccessfulModel, ...CANDIDATE_MODELS]));
   const errors: { model: string; error: string }[] = [];
 
   for (const candidate of candidates) {
-    try {
-      console.log(`[${stepName}] Calling Gemini using model: "${candidate}"`);
-      const res = await ai.models.generateContent({
-        model: candidate,
-        contents,
-        config,
-      });
-      console.log(`[${stepName}] Model "${candidate}" responded successfully.`);
-      activeModel = candidate; // Remember responsive model for remaining agents
-      return { text: res.text || '{}', modelUsed: candidate };
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[${stepName}] Model "${candidate}" was not accepted: ${msg}`);
-      errors.push({ model: candidate, error: msg });
+    // Retry up to 2 times for 503 / 429 transient errors with backoff (800ms, 1600ms)
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        console.log(`[${stepName}] Calling Gemini using model: "${candidate}" (Attempt ${attempt}/${maxAttempts})`);
+        const res = await ai.models.generateContent({
+          model: candidate,
+          contents,
+          config,
+        });
+
+        const promptTokens = res.usageMetadata?.promptTokenCount ?? 0;
+        const candidatesTokens = res.usageMetadata?.candidatesTokenCount ?? 0;
+        const thoughtsTokens = (res.usageMetadata as { thoughtsTokenCount?: number } | undefined)?.thoughtsTokenCount ?? 0;
+        const totalTokens = res.usageMetadata?.totalTokenCount ?? (promptTokens + candidatesTokens + thoughtsTokens);
+        const estimatedCostUsd = computeTokenCost(candidate, promptTokens, candidatesTokens, thoughtsTokens);
+
+        console.log(`[${stepName}] Model "${candidate}" responded successfully (${totalTokens} tokens).`);
+        lastSuccessfulModel = candidate; // Remember responsive model for remaining agents and future runs
+        return {
+          text: res.text || '{}',
+          modelUsed: candidate,
+          usage: {
+            promptTokens,
+            candidatesTokens,
+            thoughtsTokens,
+            totalTokens,
+            estimatedCostUsd,
+          },
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const transient = isTransientError(err);
+        console.warn(`[${stepName}] Model "${candidate}" attempt ${attempt} failed: ${msg}`);
+
+        if (transient && attempt < maxAttempts) {
+          const delay = attempt === 1 ? 800 : 1600;
+          console.log(`[${stepName}] Transient error (${msg}), retrying "${candidate}" in ${delay}ms...`);
+          await sleep(delay);
+          continue;
+        }
+
+        // Non-transient or exhausted retries for this model: capture error and proceed to next candidate
+        errors.push({ model: candidate, error: msg });
+        break;
+      }
     }
   }
 
   const detailedSummary = errors.map((e) => `[${e.model}]: ${e.error}`).join(' | ');
   console.error(`[${stepName}] All candidate models failed!`, detailedSummary);
   throw new Error(`All candidate models failed: ${detailedSummary}`);
+}
+
+/**
+ * Execute real Google Search Grounding for Context Agent
+ * Returns search grounding text, real web source links/titles, grounding status, and token usage.
+ * Never invents mock sources.
+ */
+async function callGeminiWithGrounding(
+  ai: GoogleGenAI,
+  query: string,
+  stepName: string
+): Promise<{
+  text: string;
+  sources: { title: string; url: string }[];
+  modelUsed: string;
+  groundingStatus: string;
+  usage: TokenUsage;
+}> {
+  const candidates = Array.from(new Set([lastSuccessfulModel, ...CANDIDATE_MODELS]));
+  const errors: string[] = [];
+
+  for (const candidate of candidates) {
+    const maxAttempts = 2;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        console.log(`[${stepName}] Calling Google Search Grounding with model: "${candidate}" (Attempt ${attempt}/${maxAttempts})`);
+        const res = await ai.models.generateContent({
+          model: candidate,
+          contents: query,
+          config: {
+            tools: [{ googleSearch: {} }],
+          },
+        });
+
+        const text = res.text || '';
+        const rawChunks = res.candidates?.[0]?.groundingMetadata?.groundingChunks;
+        const sources: { title: string; url: string }[] = [];
+        const seenUrls = new Set<string>();
+
+        if (Array.isArray(rawChunks)) {
+          for (const chunk of rawChunks) {
+            const web = (chunk as { web?: { uri?: string; title?: string } })?.web;
+            const uri = web?.uri;
+            const title = web?.title || uri;
+            if (uri && !seenUrls.has(uri)) {
+              seenUrls.add(uri);
+              sources.push({ title: title || uri, url: uri });
+            }
+          }
+        }
+
+        const groundingStatus =
+          sources.length > 0
+            ? `Google Search grounding active (${sources.length} sources found)`
+            : 'Google Search grounding active (no direct URL citations)';
+
+        const promptTokens = res.usageMetadata?.promptTokenCount ?? 0;
+        const candidatesTokens = res.usageMetadata?.candidatesTokenCount ?? 0;
+        const thoughtsTokens = (res.usageMetadata as { thoughtsTokenCount?: number } | undefined)?.thoughtsTokenCount ?? 0;
+        const totalTokens = res.usageMetadata?.totalTokenCount ?? (promptTokens + candidatesTokens + thoughtsTokens);
+        const estimatedCostUsd = computeTokenCost(candidate, promptTokens, candidatesTokens, thoughtsTokens);
+
+        lastSuccessfulModel = candidate;
+        return {
+          text,
+          sources,
+          modelUsed: candidate,
+          groundingStatus,
+          usage: {
+            promptTokens,
+            candidatesTokens,
+            thoughtsTokens,
+            totalTokens,
+            estimatedCostUsd,
+          },
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[${stepName}] Grounding with "${candidate}" attempt ${attempt} failed: ${msg}`);
+        errors.push(`[${candidate}]: ${msg}`);
+
+        if (isTransientError(err) && !msg.includes('quota') && !msg.includes('resource_exhausted') && attempt < maxAttempts) {
+          await sleep(400);
+          continue;
+        }
+        break; // Try next candidate model
+      }
+    }
+  }
+
+  console.warn(`[${stepName}] Search grounding failed on all models: ${errors.join(' | ')}. Continuing without grounding.`);
+  return {
+    text: '',
+    sources: [],
+    modelUsed: lastSuccessfulModel,
+    groundingStatus: 'Search grounding unavailable',
+    usage: {
+      promptTokens: 0,
+      candidatesTokens: 0,
+      thoughtsTokens: 0,
+      totalTokens: 0,
+      estimatedCostUsd: null,
+    },
+  };
 }
 
 /**
@@ -380,9 +499,6 @@ export async function runCropHealthPipeline(
     },
   });
 
-  // Run startup model check once to log all available models to console
-  logStartupAvailableModels(ai).catch((e) => console.warn('Background model check error:', e));
-
   // Prepare initial trace with 4 pending steps
   trace.push(
     {
@@ -393,7 +509,7 @@ export async function runCropHealthPipeline(
       durationMs: 0,
       timestamp: new Date().toISOString(),
       thoughtProcess: '',
-      modelUsed: MODEL,
+      modelUsed: lastSuccessfulModel,
     },
     {
       agentId: 'context',
@@ -403,7 +519,7 @@ export async function runCropHealthPipeline(
       durationMs: 0,
       timestamp: new Date().toISOString(),
       thoughtProcess: '',
-      modelUsed: MODEL,
+      modelUsed: lastSuccessfulModel,
     },
     {
       agentId: 'planner',
@@ -413,7 +529,7 @@ export async function runCropHealthPipeline(
       durationMs: 0,
       timestamp: new Date().toISOString(),
       thoughtProcess: '',
-      modelUsed: MODEL,
+      modelUsed: lastSuccessfulModel,
     },
     {
       agentId: 'safety',
@@ -423,7 +539,7 @@ export async function runCropHealthPipeline(
       durationMs: 0,
       timestamp: new Date().toISOString(),
       thoughtProcess: '',
-      modelUsed: MODEL,
+      modelUsed: lastSuccessfulModel,
     }
   );
 
@@ -469,9 +585,9 @@ Produce output according to the JSON schema.
 `;
 
   let visionResult: VisionDiagnosisResult;
-  let visionModelUsed = MODEL;
+  let visionModelUsed = lastSuccessfulModel;
   try {
-    const { text: rawVision, modelUsed } = await callGeminiWithFallback(
+    const { text: rawVision, modelUsed, usage: visionUsage } = await callGeminiWithFallback(
       ai,
       {
         parts: [imagePart, { text: visionPrompt }],
@@ -539,7 +655,7 @@ Produce output according to the JSON schema.
     );
 
     visionModelUsed = modelUsed;
-    console.log(`AGENT 1 [Vision Diagnostician] Raw Model Output (Model: ${modelUsed}):\n`, rawVision);
+    console.log(`AGENT 1 [Vision Diagnostician] Completed (Model: ${modelUsed})`);
 
     const parsed = cleanAndParseJSON<Record<string, unknown>>(rawVision, 'Vision Diagnostician');
 
@@ -580,6 +696,7 @@ Produce output according to the JSON schema.
     trace[0].status = 'completed';
     trace[0].durationMs = Date.now() - visionStart;
     trace[0].modelUsed = visionModelUsed;
+    trace[0].tokenUsage = visionUsage;
     trace[0].thoughtProcess = visionResult.reasoning;
     trace[0].rawOutput = parsed;
     trace[0].toolCalls = [
@@ -591,6 +708,7 @@ Produce output according to the JSON schema.
           image_quality: visionResult.image_quality,
           topDiagnosis: visionResult.primaryDiagnosis,
           confidence: visionResult.overallConfidence,
+          isHealthy: visionResult.isHealthy,
         },
       },
     ];
@@ -599,7 +717,7 @@ Produce output according to the JSON schema.
     trace[0].status = 'failed';
     trace[0].durationMs = Date.now() - visionStart;
     trace[0].modelUsed = visionModelUsed;
-    trace[0].error = `[Model: ${MODEL} / ${FALLBACK_MODEL}] ${err instanceof Error ? err.message : String(err)}`;
+    trace[0].error = `[Model: ${visionModelUsed}] ${err instanceof Error ? err.message : String(err)}`;
     onStepProgress?.([...trace]);
     throw new Error(`Vision Diagnostician failed: ${trace[0].error}`);
   }
@@ -611,14 +729,17 @@ Produce output according to the JSON schema.
   if (visionResult.image_quality === 'not_a_plant' || visionResult.image_quality === 'poor') {
     const isNotPlant = visionResult.image_quality === 'not_a_plant';
     trace[1].status = 'skipped';
+    trace[1].durationMs = 0;
     trace[1].thoughtProcess = isId
       ? 'Dilewati: Foto bukan tanaman budidaya yang valid.'
       : 'Skipped: Photo is not a valid agricultural crop.';
     trace[2].status = 'skipped';
+    trace[2].durationMs = 0;
     trace[2].thoughtProcess = isId
       ? 'Dilewati: Menunggu foto tanaman yang jelas.'
       : 'Skipped: Awaiting clear crop photo.';
     trace[3].status = 'skipped';
+    trace[3].durationMs = 0;
     trace[3].thoughtProcess = isId
       ? 'Dilewati: Menunggu foto tanaman yang jelas.'
       : 'Skipped: Awaiting clear crop photo.';
@@ -632,28 +753,17 @@ Produce output according to the JSON schema.
           ? 'Kualitas foto terlalu buram atau minim pencahayaan untuk diagnosis patologi yang akurat. Mohon ambil foto lebih dekat dan fokus.'
           : 'Image quality is too poor or blurry for an accurate pathological diagnosis. Please take a closer, well-lit photo of the affected plant tissue.');
 
-    const placeholderWeather: WeatherData = {
-      locationName: payload.location || 'Subang, Indonesia',
-      latitude: -6.57,
-      longitude: 107.76,
-      temperature: 28,
-      relativeHumidity: 80,
-      precipitation: 0,
-      weatherCode: 1,
-      weatherDescription: isId ? 'Cerah Berawan' : 'Partly Cloudy',
-      windSpeed: 6,
-    };
-
     return {
       success: true,
       language: lang,
       vision: visionResult,
       context: {
-        weather: placeholderWeather,
+        weather: null,
         diseaseRiskLevel: 'low',
         diseaseRiskFactors: [qualityNotice],
         microclimateSummary: qualityNotice,
         regionalAgroAdvisory: qualityNotice,
+        groundingSources: [],
       },
       planner: {
         strategyOverview: qualityNotice,
@@ -690,12 +800,14 @@ Produce output according to the JSON schema.
       },
       trace,
       overallDurationMs: Date.now() - overallStartTime,
+      totalTokenUsage: trace[0].tokenUsage,
+      totalEstimatedCostUsd: trace[0].tokenUsage?.estimatedCostUsd ?? null,
       timestamp: new Date().toISOString(),
     };
   }
 
   // ==========================================
-  // AGENT 2: Context Agent (Weather & Microclimate)
+  // AGENT 2: Context Agent (Weather & Microclimate with Real Google Search Grounding)
   // ==========================================
   trace[1].status = 'running';
   onStepProgress?.([...trace]);
@@ -705,11 +817,19 @@ Produce output according to the JSON schema.
   const weatherData = await fetchWeatherFromClient(coords.lat, coords.lon, coords.name, lang);
 
   let contextResult: ContextResult;
-  let contextModelUsed = MODEL;
+  let contextModelUsed = lastSuccessfulModel;
   try {
+    // Step 2A: Grounded Google Search for Regional Agronomic Guidance
+    const searchQuery = isId
+      ? `Panduan pengendalian penyakit ${visionResult.primaryDiagnosis} tanaman ${visionResult.crop} di Indonesia ${coords.name} rekomendasi teknis PPL budidaya`
+      : `Agronomic extension control practices and disease risk for ${visionResult.primaryDiagnosis} on ${visionResult.crop} in ${coords.name} Indonesia`;
+
+    const groundedSearch = await callGeminiWithGrounding(ai, searchQuery, 'Context Agent Search Grounding');
+
+    // Step 2B: Structured Schema Call with Weather Data and Grounded Search Insights
     const weatherDesc = weatherData
-      ? `Temperature: ${weatherData.temperature}°C, Relative Humidity: ${weatherData.relativeHumidity}%, Rainfall: ${weatherData.precipitation}mm, Condition: ${weatherData.weatherDescription}, Wind: ${weatherData.windSpeed} km/h`
-      : 'Weather data could not be retrieved (set to null). Evaluate risks based on typical humid tropical smallholder conditions.';
+      ? `Live Microclimate Sensor (Open-Meteo): Temperature: ${weatherData.temperature}°C, Relative Humidity: ${weatherData.relativeHumidity}%, Rainfall: ${weatherData.precipitation}mm, Condition: ${weatherData.weatherDescription}, Wind: ${weatherData.windSpeed} km/h`
+      : 'Live Open-Meteo weather data was unavailable (set to null). Formulate risk assessment based on regional agroclimate norms and visible symptoms.';
 
     const contextPrompt = `
 You are the "Context Agent" in Tani Pintar.
@@ -717,21 +837,24 @@ Crop: ${visionResult.crop} (${visionResult.cropScientificName || ''})
 Primary Diagnosis: ${visionResult.primaryDiagnosis}
 Is plant healthy?: ${visionResult.isHealthy}
 Location: ${coords.name} (Latitude: ${coords.lat}, Longitude: ${coords.lon})
-Live Field Weather from Open-Meteo:
+
 ${weatherDesc}
+
+Google Search Regional Agronomic Guidance:
+"${groundedSearch.text || 'No live search text retrieved. Use established tropical agronomy knowledge for Indonesia.'}"
 
 Language: ${isId ? 'Bahasa Indonesia' : 'English'}.
 
 Task:
-1. Explain how these weather conditions (humidity, rainfall splash, temp) influence pathogen sporulation, incubation, and spread for ${visionResult.primaryDiagnosis}. (If plant is healthy, explain optimal climate maintenance).
+1. Explain how current/typical microclimate conditions (humidity, moisture splash, temp) influence pathogen sporulation, incubation, or pest reproduction for ${visionResult.primaryDiagnosis}. (If plant is healthy, explain optimal climate maintenance).
 2. Assess disease risk level: 'low', 'moderate', 'high', 'severe'.
 3. Detail 2-3 specific risk factors.
-4. Formulate regional extension advisory for local smallholders.
+4. Formulate regional extension advisory for local smallholders based on regional practices.
 
 Return according to the JSON schema.
 `;
 
-    const { text: rawContext, modelUsed } = await callGeminiWithFallback(
+    const { text: rawContext, modelUsed: structuredModel, usage: structuredUsage } = await callGeminiWithFallback(
       ai,
       contextPrompt,
       {
@@ -757,54 +880,71 @@ Return according to the JSON schema.
               type: Type.STRING,
               description: 'Agronomic extension recommendation adapted to local climate',
             },
-            groundingSources: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  title: { type: Type.STRING },
-                  url: { type: Type.STRING },
-                },
-                required: ['title', 'url'],
-              },
-            },
           },
           required: ['diseaseRiskLevel', 'diseaseRiskFactors', 'microclimateSummary', 'regionalAgroAdvisory'],
         },
       },
-      'Context Agent'
+      'Context Agent (Structured)'
     );
 
-    contextModelUsed = modelUsed;
-    console.log(`AGENT 2 [Context Agent] Raw Model Output (Model: ${modelUsed}):\n`, rawContext);
+    contextModelUsed = structuredModel;
+    console.log(`AGENT 2 [Context Agent] Completed (Model: ${contextModelUsed})`);
 
     const parsedContext = cleanAndParseJSON<Record<string, unknown>>(rawContext, 'Context Agent');
 
     contextResult = {
       weather: weatherData,
-      diseaseRiskLevel: (parsedContext.diseaseRiskLevel as 'low' | 'moderate' | 'high' | 'severe') || 'high',
+      diseaseRiskLevel: (parsedContext.diseaseRiskLevel as 'low' | 'moderate' | 'high' | 'severe') || 'moderate',
       diseaseRiskFactors: Array.isArray(parsedContext.diseaseRiskFactors)
         ? (parsedContext.diseaseRiskFactors as string[])
         : [],
       microclimateSummary: (parsedContext.microclimateSummary as string) || '',
       regionalAgroAdvisory: (parsedContext.regionalAgroAdvisory as string) || '',
-      groundingSources: Array.isArray(parsedContext.groundingSources)
-        ? (parsedContext.groundingSources as { title: string; url: string }[])
-        : [
-            { title: 'Open-Meteo High-Resolution Weather API', url: 'https://open-meteo.com' },
-            { title: 'Balai Penelitian Tanaman (Balitbangtan)', url: 'https://pertanian.go.id' },
-          ],
+      // Only include real web sources returned by Google Search Grounding; never invent sources
+      groundingSources: groundedSearch.sources,
     };
+
+    // Combine tokens from grounding search and structured synthesis calls
+    const contextPromptTokens = groundedSearch.usage.promptTokens + structuredUsage.promptTokens;
+    const contextCandidatesTokens = groundedSearch.usage.candidatesTokens + structuredUsage.candidatesTokens;
+    const contextThoughtsTokens = (groundedSearch.usage.thoughtsTokens || 0) + (structuredUsage.thoughtsTokens || 0);
+    const contextTotalTokens = groundedSearch.usage.totalTokens + structuredUsage.totalTokens;
+    const contextCost =
+      typeof groundedSearch.usage.estimatedCostUsd === 'number' &&
+      typeof structuredUsage.estimatedCostUsd === 'number'
+        ? groundedSearch.usage.estimatedCostUsd + structuredUsage.estimatedCostUsd
+        : null;
 
     trace[1].status = 'completed';
     trace[1].durationMs = Date.now() - contextStart;
     trace[1].modelUsed = contextModelUsed;
+    trace[1].tokenUsage = {
+      promptTokens: contextPromptTokens,
+      candidatesTokens: contextCandidatesTokens,
+      thoughtsTokens: contextThoughtsTokens,
+      totalTokens: contextTotalTokens,
+      estimatedCostUsd: contextCost,
+    };
     trace[1].thoughtProcess = contextResult.microclimateSummary;
     trace[1].rawOutput = parsedContext;
+    trace[1].sources = groundedSearch.sources;
+    trace[1].groundingStatus = groundedSearch.groundingStatus;
     trace[1].toolCalls = [
       {
+        toolName: 'google_search_grounding',
+        input: {
+          query: searchQuery,
+          model: groundedSearch.modelUsed,
+        },
+        output: {
+          status: groundedSearch.groundingStatus,
+          sourcesCount: groundedSearch.sources.length,
+          sources: groundedSearch.sources,
+        },
+      },
+      {
         toolName: 'open_meteo_weather_lookup',
-        input: { model: contextModelUsed, lat: coords.lat, lon: coords.lon, location: coords.name },
+        input: { lat: coords.lat, lon: coords.lon, location: coords.name },
         output: weatherData
           ? {
               temp: `${weatherData.temperature}°C`,
@@ -812,7 +952,7 @@ Return according to the JSON schema.
               precip: `${weatherData.precipitation} mm`,
               condition: weatherData.weatherDescription,
             }
-          : { status: 'weather_call_fallback_null' },
+          : { status: 'weather_null_or_unavailable' },
       },
     ];
     onStepProgress?.([...trace]);
@@ -820,7 +960,7 @@ Return according to the JSON schema.
     trace[1].status = 'failed';
     trace[1].durationMs = Date.now() - contextStart;
     trace[1].modelUsed = contextModelUsed;
-    trace[1].error = `[Model: ${MODEL} / ${FALLBACK_MODEL}] ${err instanceof Error ? err.message : String(err)}`;
+    trace[1].error = `[Model: ${contextModelUsed}] ${err instanceof Error ? err.message : String(err)}`;
     onStepProgress?.([...trace]);
     throw new Error(`Context Agent failed: ${trace[1].error}`);
   }
@@ -833,7 +973,7 @@ Return according to the JSON schema.
   const plannerStart = Date.now();
 
   let plannerResult: PlannerResult;
-  let plannerModelUsed = MODEL;
+  let plannerModelUsed = lastSuccessfulModel;
   try {
     const plannerPrompt = `
 You are the "Action Planner" agent in Tani Pintar.
@@ -858,7 +998,7 @@ Instructions:
 Return according to the JSON schema.
 `;
 
-    const { text: rawPlanner, modelUsed } = await callGeminiWithFallback(
+    const { text: rawPlanner, modelUsed, usage: plannerUsage } = await callGeminiWithFallback(
       ai,
       plannerPrompt,
       {
@@ -927,7 +1067,7 @@ Return according to the JSON schema.
     );
 
     plannerModelUsed = modelUsed;
-    console.log(`AGENT 3 [Planner Agent] Raw Model Output (Model: ${modelUsed}):\n`, rawPlanner);
+    console.log(`AGENT 3 [Planner Agent] Completed (Model: ${plannerModelUsed})`);
 
     const parsedPlanner = cleanAndParseJSON<Record<string, unknown>>(rawPlanner, 'Planner Agent');
 
@@ -946,6 +1086,7 @@ Return according to the JSON schema.
     trace[2].status = 'completed';
     trace[2].durationMs = Date.now() - plannerStart;
     trace[2].modelUsed = plannerModelUsed;
+    trace[2].tokenUsage = plannerUsage;
     trace[2].thoughtProcess = plannerResult.strategyOverview;
     trace[2].rawOutput = parsedPlanner;
     trace[2].toolCalls = [
@@ -964,15 +1105,17 @@ Return according to the JSON schema.
     trace[2].status = 'failed';
     trace[2].durationMs = Date.now() - plannerStart;
     trace[2].modelUsed = plannerModelUsed;
-    trace[2].error = `[Model: ${MODEL} / ${FALLBACK_MODEL}] ${err instanceof Error ? err.message : String(err)}`;
+    trace[2].error = `[Model: ${plannerModelUsed}] ${err instanceof Error ? err.message : String(err)}`;
     onStepProgress?.([...trace]);
     throw new Error(`Planner Agent failed: ${trace[2].error}`);
   }
 
   // ==========================================
   // AGENT 4: Safety Checker Agent
-  // Mandatory: if top confidence < 0.6, image_quality is not "good", or the plan mentions chemicals,
-  // add a warning and advise consulting a local agricultural extension officer (PPL). Never give pesticide dosages.
+  // Mandatory rules:
+  // 1. If top confidence < 0.6, image_quality is not "good", or plan mentions chemicals,
+  //    add a warning and advise consulting a local agricultural extension officer (PPL).
+  // 2. Never give pesticide dosage instructions!
   // ==========================================
   trace[3].status = 'running';
   onStepProgress?.([...trace]);
@@ -986,7 +1129,7 @@ Return according to the JSON schema.
   const mandatoryWarning = confidenceTooLow || imageQualityNotGood || planContainsChemicals;
 
   let safetyResult: SafetyCheckResult;
-  let safetyModelUsed = MODEL;
+  let safetyModelUsed = lastSuccessfulModel;
   try {
     const safetyPrompt = `
 You are the "Safety Checker" agent in Tani Pintar.
@@ -1009,7 +1152,7 @@ CRITICAL ENFORCEMENT RULES:
 Return according to the JSON schema.
 `;
 
-    const { text: rawSafety, modelUsed } = await callGeminiWithFallback(
+    const { text: rawSafety, modelUsed, usage: safetyUsage } = await callGeminiWithFallback(
       ai,
       safetyPrompt,
       {
@@ -1064,7 +1207,7 @@ Return according to the JSON schema.
     );
 
     safetyModelUsed = modelUsed;
-    console.log(`AGENT 4 [Safety Checker] Raw Model Output (Model: ${modelUsed}):\n`, rawSafety);
+    console.log(`AGENT 4 [Safety Checker] Completed (Model: ${safetyModelUsed})`);
 
     const parsedSafety = cleanAndParseJSON<Record<string, unknown>>(rawSafety, 'Safety Checker');
 
@@ -1121,6 +1264,7 @@ Return according to the JSON schema.
     trace[3].status = 'completed';
     trace[3].durationMs = Date.now() - safetyStart;
     trace[3].modelUsed = safetyModelUsed;
+    trace[3].tokenUsage = safetyUsage;
     trace[3].thoughtProcess = `Safety validation passed: Warning required = ${safetyResult.warningRequired}. Confidence: ${(topConfidence * 100).toFixed(0)}%. Chemicals present: ${planContainsChemicals}.`;
     trace[3].rawOutput = parsedSafety;
     trace[3].toolCalls = [
@@ -1138,12 +1282,42 @@ Return according to the JSON schema.
     trace[3].status = 'failed';
     trace[3].durationMs = Date.now() - safetyStart;
     trace[3].modelUsed = safetyModelUsed;
-    trace[3].error = `[Model: ${MODEL} / ${FALLBACK_MODEL}] ${err instanceof Error ? err.message : String(err)}`;
+    trace[3].error = `[Model: ${safetyModelUsed}] ${err instanceof Error ? err.message : String(err)}`;
     onStepProgress?.([...trace]);
     throw new Error(`Safety Checker failed: ${trace[3].error}`);
   }
 
   const overallDurationMs = Date.now() - overallStartTime;
+
+  // Compute aggregate token usage and estimated cost across all agents
+  let totalPromptTokens = 0;
+  let totalCandidatesTokens = 0;
+  let totalThoughtsTokens = 0;
+  let totalTokens = 0;
+  let anyModelUnpriced = false;
+  let totalCost = 0;
+
+  for (const step of trace) {
+    if (step.tokenUsage) {
+      totalPromptTokens += step.tokenUsage.promptTokens;
+      totalCandidatesTokens += step.tokenUsage.candidatesTokens;
+      totalThoughtsTokens += step.tokenUsage.thoughtsTokens || 0;
+      totalTokens += step.tokenUsage.totalTokens;
+      if (step.tokenUsage.estimatedCostUsd !== null && step.tokenUsage.estimatedCostUsd !== undefined) {
+        totalCost += step.tokenUsage.estimatedCostUsd;
+      } else {
+        anyModelUnpriced = true;
+      }
+    }
+  }
+
+  const totalTokenUsage: TokenUsage = {
+    promptTokens: totalPromptTokens,
+    candidatesTokens: totalCandidatesTokens,
+    thoughtsTokens: totalThoughtsTokens,
+    totalTokens,
+    estimatedCostUsd: anyModelUnpriced ? null : totalCost,
+  };
 
   return {
     success: true,
@@ -1154,6 +1328,8 @@ Return according to the JSON schema.
     safety: safetyResult,
     trace,
     overallDurationMs,
+    totalTokenUsage,
+    totalEstimatedCostUsd: totalTokenUsage.estimatedCostUsd ?? null,
     timestamp: new Date().toISOString(),
   };
 }

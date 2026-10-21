@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sprout, Globe, Sparkles, ShieldCheck } from 'lucide-react';
+import { Sprout, Sparkles } from 'lucide-react';
 import { Language } from '../types';
 import { translations } from '../i18n/translations';
 
@@ -71,10 +71,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({ language, onLanguageChange, on
             </button>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1 text-[11px] text-emerald-200/70 bg-emerald-800/40 px-2.5 py-1 rounded-md border border-emerald-700/40">
-            <ShieldCheck className="w-3.5 h-3.5 text-lime-400" />
-            <span>PPL Verified</span>
-          </div>
         </div>
       </div>
     </header>

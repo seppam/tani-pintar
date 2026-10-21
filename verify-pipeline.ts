@@ -1,36 +1,17 @@
-import { runCropHealthPipeline, logStartupAvailableModels, MODEL, FALLBACK_MODEL } from './src/services/geminiPipeline';
+import { runCropHealthPipeline, CANDIDATE_MODELS } from './src/services/geminiPipeline';
 import { SAMPLE_CROPS } from './src/data/sampleCrops';
-import { GoogleGenAI } from '@google/genai';
 
-async function main() {
-  console.log('====================================================');
-  console.log('RE-RUNNING "Padi Sawah / Blas Daun" SAMPLE VERIFICATION');
-  console.log(`Primary MODEL: "${MODEL}"`);
-  console.log(`Fallback MODEL: "${FALLBACK_MODEL}"`);
-  console.log('====================================================\n');
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.error('ERROR: No GEMINI_API_KEY available in process.env');
-    process.exit(1);
-  }
-
-  // 1. Startup check: query available models
-  const ai = new GoogleGenAI({ apiKey });
-  const availableModels = await logStartupAvailableModels(ai);
-  console.log('\nTop 20 models available to this API key:');
-  console.log(availableModels.slice(0, 20));
-
-  // 2. Run the Padi Sawah sample
-  const sample = SAMPLE_CROPS.find(s => s.id === 'sample-rice-blast');
+async function runSampleTest(sampleId: string) {
+  const sample = SAMPLE_CROPS.find((s) => s.id === sampleId);
   if (!sample) {
-    console.error('ERROR: Sample not found');
-    process.exit(1);
+    throw new Error(`Sample with id "${sampleId}" not found`);
   }
 
-  console.log('\nStarting pipeline execution with sample:', sample.name);
+  console.log('====================================================');
+  console.log(`TESTING SAMPLE: ${sample.name} (${sample.cropNameId} - ${sample.issueId})`);
   console.log('Location:', sample.location);
-  console.log('Note:', sample.noteId);
+  console.log('Candidate Models:', CANDIDATE_MODELS.join(' -> '));
+  console.log('====================================================\n');
 
   const result = await runCropHealthPipeline(
     {
@@ -43,36 +24,73 @@ async function main() {
       language: 'id',
     },
     (traceUpdate) => {
-      const activeStep = traceUpdate.find(s => s.status === 'running');
+      const activeStep = traceUpdate.find((s) => s.status === 'running');
       if (activeStep) {
-        console.log(`--> [LIVE PROGRESS] Agent active: ${activeStep.agentName}`);
+        console.log(`--> [LIVE PROGRESS] Active agent: ${activeStep.agentName}`);
       }
     }
   );
 
-  console.log('\n====================================================');
-  console.log('PIPELINE EXECUTION COMPLETE');
-  console.log(`Overall Duration: ${result.overallDurationMs} ms`);
-  console.log('====================================================\n');
+  console.log('\n----------------------------------------------------');
+  console.log(`ANALYSIS RESULT FOR: ${sample.name}`);
+  console.log(`Total Duration: ${result.overallDurationMs} ms`);
+  console.log('----------------------------------------------------');
 
   result.trace.forEach((step, idx) => {
-    console.log(`Step ${idx + 1}: ${step.agentName}`);
+    console.log(`Agent ${idx + 1}: ${step.agentName}`);
     console.log(`  - Status: ${step.status.toUpperCase()}`);
-    console.log(`  - Model Used: ${step.modelUsed}`);
+    console.log(`  - Model Used: ${step.modelUsed || 'N/A'}`);
     console.log(`  - Duration: ${step.durationMs} ms`);
-    if (step.error) {
-      console.log(`  - Error: ${step.error}`);
+    if (step.tokenUsage) {
+      console.log(`  - Tokens: Total = ${step.tokenUsage.totalTokens} (Prompt: ${step.tokenUsage.promptTokens}, Candidates: ${step.tokenUsage.candidatesTokens}${step.tokenUsage.thoughtsTokens ? `, Thoughts: ${step.tokenUsage.thoughtsTokens}` : ''})`);
+      console.log(`  - Estimated Cost: ${step.tokenUsage.estimatedCostUsd !== null && step.tokenUsage.estimatedCostUsd !== undefined ? `$${step.tokenUsage.estimatedCostUsd.toFixed(5)} USD` : 'price n/a'}`);
+    } else {
+      console.log('  - Tokens: N/A');
     }
-    console.log('');
+    if (step.agentId === 'context') {
+      const sourcesCount = step.sources ? step.sources.length : 0;
+      console.log(`  - Grounding Sources Returned: ${sourcesCount > 0 ? `YES (${sourcesCount} sources)` : 'NO / Unavailable'}`);
+      if (step.sources && step.sources.length > 0) {
+        step.sources.forEach((src, i) => console.log(`      [${i + 1}] ${src.title} -> ${src.url}`));
+      }
+    }
   });
 
-  console.log('Step 1 Diagnosis:', result.vision.primaryDiagnosis, `(${(result.vision.overallConfidence * 100).toFixed(0)}% confidence)`);
-  console.log('Step 2 Weather Location:', result.context.weather?.locationName, `${result.context.weather?.temperature}°C, ${result.context.weather?.relativeHumidity}% humidity`);
-  console.log('Step 3 Action Steps Count:', result.planner.steps.length);
-  console.log('Step 4 Warning Required:', result.safety.warningRequired);
+  if (result.totalTokenUsage) {
+    console.log('\nTotal Tokens for Run:');
+    console.log(`  Prompt: ${result.totalTokenUsage.promptTokens}, Candidates: ${result.totalTokenUsage.candidatesTokens}, Total: ${result.totalTokenUsage.totalTokens}`);
+    console.log(`  Total Estimated Cost: ${result.totalEstimatedCostUsd !== null && result.totalEstimatedCostUsd !== undefined ? `$${result.totalEstimatedCostUsd.toFixed(5)} USD` : 'price n/a'}`);
+  }
+
+  console.log('\nDiagnosis Summary:');
+  console.log(`  Primary: ${result.vision.primaryDiagnosis} (${(result.vision.overallConfidence * 100).toFixed(0)}% confidence)`);
+  console.log(`  Disease Risk: ${result.context.diseaseRiskLevel}`);
+  console.log(`  Action Plan Steps: ${result.planner.steps.length}`);
+  console.log(`  Safety Warning Required: ${result.safety.warningRequired}`);
+  console.log('====================================================\n');
+
+  return result;
 }
 
-main().catch(err => {
-  console.error('\nPIPELINE FAILED WITH ERROR:', err);
+async function main() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.error('ERROR: No GEMINI_API_KEY found in process.env');
+    process.exit(1);
+  }
+
+  console.log('Starting verification of Rice Blast and Corn Armyworm samples...\n');
+
+  // Test 1: Rice Blast
+  await runSampleTest('sample-rice-blast');
+
+  // Test 2: Corn Armyworm
+  await runSampleTest('sample-corn-armyworm');
+
+  console.log('ALL SAMPLE VERIFICATIONS COMPLETED SUCCESSFULLY!');
+}
+
+main().catch((err) => {
+  console.error('\nEXECUTION FAILED WITH ERROR:', err);
   process.exit(1);
 });

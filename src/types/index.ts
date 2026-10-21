@@ -91,6 +91,14 @@ export interface SafetyCheckResult {
   criticalNotice?: string;
 }
 
+export interface TokenUsage {
+  promptTokens: number;
+  candidatesTokens: number;
+  thoughtsTokens?: number;
+  totalTokens: number;
+  estimatedCostUsd?: number | null; // null if model pricing is not published ("price n/a")
+}
+
 export interface AgentTraceStep {
   agentId: 'vision' | 'context' | 'planner' | 'safety';
   agentName: string;
@@ -100,6 +108,7 @@ export interface AgentTraceStep {
   timestamp: string;
   thoughtProcess: string;
   modelUsed?: string;
+  tokenUsage?: TokenUsage;
   toolCalls?: {
     toolName: string;
     input: Record<string, unknown>;
@@ -107,6 +116,8 @@ export interface AgentTraceStep {
   }[];
   rawOutput?: Record<string, unknown>;
   error?: string;
+  sources?: { title: string; url: string }[];
+  groundingStatus?: string;
 }
 
 export interface FullAnalysisResponse {
@@ -118,6 +129,8 @@ export interface FullAnalysisResponse {
   safety: SafetyCheckResult;
   trace: AgentTraceStep[];
   overallDurationMs: number;
+  totalTokenUsage?: TokenUsage;
+  totalEstimatedCostUsd?: number | null;
   timestamp: string;
   isMockFallback?: boolean;
   error?: string;

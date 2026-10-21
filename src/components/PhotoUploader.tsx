@@ -139,6 +139,14 @@ const PhotoUploaderComponent: React.FC<PhotoUploaderProps> = ({
       );
       return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      setValidationError(
+        language === 'id'
+          ? 'Ukuran berkas melebihi 10MB. Mohon gunakan foto dengan ukuran lebih kecil.'
+          : 'File size exceeds 10MB. Please use a smaller image.'
+      );
+      return;
+    }
     setValidationError(null);
     setMimeType(file.type || 'image/jpeg');
 
@@ -168,52 +176,17 @@ const PhotoUploaderComponent: React.FC<PhotoUploaderProps> = ({
     }
   };
 
-  const tryIpFallback = async (reason: string): Promise<boolean> => {
-    try {
-      const res = await fetch('https://get.geojs.io/v1/ip/geo.json');
-      if (res.ok) {
-        const data = await res.json();
-        const lat = parseFloat(data.latitude);
-        const lon = parseFloat(data.longitude);
-        if (!isNaN(lat) && !isNaN(lon)) {
-          const region = data.city || data.region || (language === 'id' ? 'Lokasi Jaringan' : 'Network Location');
-          const country = data.country || '';
-          const name = `${region}${country ? ', ' + country : ''} (IP)`;
-          setCoordinates({ lat, lon });
-          setLocation(name);
-          setLocationNotice(
-            language === 'id'
-              ? `GPS (${reason}) dialihkan ke lokasi jaringan: ${name}`
-              : `GPS (${reason}) routed to network location: ${name}`
-          );
-          setIsLocating(false);
-          return true;
-        }
-      }
-    } catch (e) {
-      console.warn('IP fallback geolocation error:', e);
-    }
-    return false;
-  };
-
   const handleUseLocation = () => {
     setLocationNotice(null);
     setIsLocating(true);
 
     if (!navigator.geolocation) {
-      void (async () => {
-        const ok = await tryIpFallback(language === 'id' ? 'Browser tidak mendukung GPS' : 'Browser lacks GPS');
-        if (!ok) {
-          setLocation('Subang, Jawa Barat');
-          setCoordinates({ lat: -6.57, lon: 107.76 });
-          setLocationNotice(
-            language === 'id'
-              ? 'GPS tidak tersedia. Menggunakan lokasi default Subang, Jawa Barat.'
-              : 'GPS not supported. Using default location Subang, West Java.'
-          );
-        }
-        setIsLocating(false);
-      })();
+      setLocationNotice(
+        language === 'id'
+          ? 'Peramban ini tidak mendukung sensor GPS. Silakan ketik lokasi lahan secara manual.'
+          : 'Browser does not support GPS geolocation. Please enter field location manually.'
+      );
+      setIsLocating(false);
       return;
     }
 
@@ -230,28 +203,24 @@ const PhotoUploaderComponent: React.FC<PhotoUploaderProps> = ({
         );
         setIsLocating(false);
       },
-      async (err: GeolocationPositionError) => {
+      (err: GeolocationPositionError) => {
         const code = err ? err.code : 0;
-        const msg = err ? err.message : '';
-        const detailedReason = msg || (
-          code === 1 ? 'Izin akses GPS ditolak' :
-          code === 2 ? 'Sinyal lokasi tidak tersedia' :
-          code === 3 ? 'Waktu pencarian GPS habis' :
-          'Sensor GPS tidak merespons'
-        );
+        const detailedReason =
+          code === 1
+            ? (language === 'id' ? 'Izin akses GPS ditolak' : 'GPS access denied')
+            : code === 2
+            ? (language === 'id' ? 'Sinyal lokasi tidak tersedia' : 'Location unavailable')
+            : code === 3
+            ? (language === 'id' ? 'Waktu pencarian GPS habis' : 'GPS request timed out')
+            : (language === 'id' ? 'Sensor GPS tidak merespons' : 'GPS sensor unresponsive');
 
         console.warn(`Geolocation error (Code ${code}):`, detailedReason);
 
-        const ok = await tryIpFallback(detailedReason);
-        if (!ok) {
-          setLocation('Subang, Jawa Barat');
-          setCoordinates({ lat: -6.57, lon: 107.76 });
-          setLocationNotice(
-            language === 'id'
-              ? `GPS (${detailedReason}). Menggunakan lokasi default Subang, Jawa Barat.`
-              : `GPS (${detailedReason}). Using default location Subang, West Java.`
-          );
-        }
+        setLocationNotice(
+          language === 'id'
+            ? `GPS tidak dapat diakses (${detailedReason}). Anda dapat memasukkan lokasi lahan secara manual.`
+            : `GPS unavailable (${detailedReason}). You can enter your field location manually.`
+        );
         setIsLocating(false);
       },
       {
@@ -420,6 +389,13 @@ const PhotoUploaderComponent: React.FC<PhotoUploaderProps> = ({
             <span>{validationError}</span>
           </div>
         )}
+
+        {/* Privacy Note: photos are sent to Google Gemini and not stored by the app */}
+        <p className="text-[11px] text-stone-500 italic text-center">
+          {language === 'id'
+            ? 'Foto dikirimkan ke Google Gemini untuk dianalisis dan tidak disimpan oleh aplikasi ini.'
+            : 'Photos are sent to Google Gemini for analysis and are not stored by the app.'}
+        </p>
 
         {/* Context Inputs: Crop, Location, Farmer Note */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">

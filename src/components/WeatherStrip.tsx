@@ -9,6 +9,7 @@ import {
   MapPin,
   ExternalLink,
   Calendar,
+  Globe,
 } from 'lucide-react';
 import { ContextResult, Language } from '../types';
 import { translations } from '../i18n/translations';
@@ -53,7 +54,7 @@ function getRiskBadge(level: 'low' | 'moderate' | 'high' | 'severe', t: typeof t
 
 const WeatherStripComponent: React.FC<WeatherStripProps> = ({ context, language }) => {
   const t = translations[language];
-  const { weather, diseaseRiskLevel, diseaseRiskFactors, microclimateSummary, regionalAgroAdvisory } = context;
+  const { weather, diseaseRiskLevel, diseaseRiskFactors, microclimateSummary, regionalAgroAdvisory, groundingSources } = context;
   const risk = getRiskBadge(diseaseRiskLevel, t);
 
   return (
@@ -177,6 +178,35 @@ const WeatherStripComponent: React.FC<WeatherStripProps> = ({ context, language 
             {t.regionalContext}:
           </span>
           {regionalAgroAdvisory}
+        </div>
+      )}
+
+      {/* Verified Google Search Grounding Sources */}
+      {groundingSources && groundingSources.length > 0 && (
+        <div className="bg-sky-50/70 p-3 rounded-xl border border-sky-200/80 space-y-1.5 text-xs">
+          <div className="flex items-center gap-1.5 font-bold text-sky-900">
+            <Globe className="w-3.5 h-3.5 text-sky-600" />
+            <span>
+              {language === 'id'
+                ? 'Sumber Agronomi Regional (Google Search):'
+                : 'Regional Agronomic Sources (Google Search):'}
+            </span>
+          </div>
+          <ul className="space-y-1 pl-1">
+            {groundingSources.map((source, idx) => (
+              <li key={idx} className="flex items-center gap-1.5 text-[11px]">
+                <ExternalLink className="w-3 h-3 text-sky-500 flex-shrink-0" />
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sky-700 hover:text-sky-900 underline truncate hover:font-medium transition-colors"
+                >
+                  {source.title || source.url}
+                </a>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
